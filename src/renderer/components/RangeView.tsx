@@ -83,7 +83,7 @@ function RangeView({ days, fetcher, label }: { days: number; fetcher: (d: number
                 formatter={((v: number, name: unknown) =>
                   name === 'lineScore' ? [v, 'score'] : [v, String(name)]) as never}
                 contentStyle={{
-                  background: '#131820',
+                  background: '#0a0b0d',
                   border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: 8,
                   fontSize: 12
@@ -123,7 +123,7 @@ function RangeView({ days, fetcher, label }: { days: number; fetcher: (d: number
                   <Tooltip
                     formatter={((v: number) => formatDuration(v)) as never}
                     contentStyle={{
-                      background: '#131820',
+                      background: '#0a0b0d',
                       border: '1px solid rgba(255,255,255,0.08)',
                       borderRadius: 8,
                       fontSize: 12

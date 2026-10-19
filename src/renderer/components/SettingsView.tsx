@@ -3,8 +3,15 @@ import type { Rule, Category, RuleRequest } from '../typesPhase6'
 import { Segmented } from './ui'
 
 type Tab = 'rules' | 'general' | 'data'
+type ThemeSetting = 'system' | 'dark' | 'light'
 
-export default function SettingsView() {
+export default function SettingsView({
+  theme,
+  onThemeChange
+}: {
+  theme?: ThemeSetting
+  onThemeChange?: (t: ThemeSetting) => void
+}) {
   const [tab, setTab] = useState<Tab>('rules')
   return (
     <div className="space-y-4">
@@ -176,7 +183,7 @@ function RuleEditor({ categories, onSaved }: { categories: Category[]; onSaved: 
 }
 
 // ---------- General ----------
-function GeneralTab() {
+function GeneralTab({ theme, onThemeChange }: { theme?: ThemeSetting; onThemeChange?: (t: ThemeSetting) => void }) {
   const [idle, setIdle] = useState(120)
   const [excludedApps, setExcludedAppsText] = useState('')
   const [excludedDomains, setExcludedDomainsText] = useState('')
@@ -204,6 +211,20 @@ function GeneralTab() {
 
   return (
     <div className="space-y-5 text-sm max-w-lg">
+      <div>
+        <label className="block font-medium mb-1">Appearance</label>
+        <Segmented
+          value={theme ?? 'dark'}
+          onChange={(v) => onThemeChange?.(v)}
+          options={[
+            { value: 'system', label: 'System' },
+            { value: 'dark', label: 'Dark' },
+            { value: 'light', label: 'Light' }
+          ]}
+        />
+        <p className="text-xs text-gray-500">System follows your OS preference. Default: dark.</p>
+      </div>
+
       <div>
         <label className="block font-medium mb-1">Idle threshold ({idle}s)</label>
         <input

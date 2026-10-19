@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-xl border border-gray-200/80 bg-white/70 shadow-sm dark:border-white/[0.06] dark:bg-[#131820] dark:shadow-none ${className}`}
+      className={`rounded-xl border border-gray-200/80 bg-white/70 shadow-sm dark:border-white/[0.06] dark:bg-[#0a0b0d] dark:shadow-none transition-colors ${className}`}
     >
       {children}
     </div>
@@ -53,7 +53,7 @@ export function Segmented<T extends string>({
           onClick={() => onChange(o.value)}
           className={`px-3 py-1 text-xs rounded-md transition-colors ${
             value === o.value
-              ? 'bg-white dark:bg-[#1d232d] dark:text-gray-100 shadow-sm text-gray-900 font-medium'
+              ? 'bg-white dark:bg-[#15161a] dark:text-gray-100 shadow-sm text-gray-900 font-medium'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
           }`}
         >

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeTheme, powerMonitor } from 'electron'
+import { app, BrowserWindow, powerMonitor } from 'electron'
 import { join } from 'path'
 import { createTray } from './tray'
 import { Tracker } from './tracker/tracker'
@@ -7,6 +7,7 @@ import { registerIpcHandlers } from './ipc'
 import { startExtensionServer } from './server'
 import { setupFileLogging } from './logging'
 import { getIconPath } from './appIcon'
+import { initTheme } from './theme'
 import type { TrackingState } from './tracker/types'
 
 let mainWindow: BrowserWindow | null = null
@@ -31,7 +32,8 @@ if (!gotTheLock) {
 } else {
   app.on('second-instance', () => {
     // Focus window if user tries to open second instance
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show()
       if (mainWindow.isMinimized()) mainWindow.restore()
       mainWindow.focus()
     }
@@ -45,12 +47,15 @@ if (!gotTheLock) {
 
     // Initialize database
     try {
-      console.log('Initializing database...')
-      getDatabase()
-      console.log('Database initialized')
+    console.log('Initializing database...')
+    getDatabase()
+    console.log('Database initialized')
     } catch (error) {
       console.error('Database init failed:', error)
     }
+
+    // Theme preference (system/dark/light) drives renderer class from now on
+    initTheme()
 
     console.log('Creating window...')
     createWindow()
@@ -98,30 +103,21 @@ function createWindow() {
     },
     icon: getIconPath()
   })
-  
+
   console.log('Window created, loading renderer...')
 
-  // Apply dark mode based on OS theme
-  if (nativeTheme.shouldUseDarkColors) {
-    mainWindow.webContents.executeJavaScript(`
-      document.documentElement.classList.add('dark')
-    `)
-  }
-
-  // Listen for OS theme changes
-  nativeTheme.on('updated', () => {
-    if (mainWindow) {
-      if (nativeTheme.shouldUseDarkColors) {
-        mainWindow.webContents.executeJavaScript(`
-          document.documentElement.classList.add('dark')
-        `)
-      } else {
-        mainWindow.webContents.executeJavaScript(`
-          document.documentElement.classList.remove('dark')
-        `)
-      }
+  // Closing the window hides it (tray keeps the app alive). Without this the
+  // BrowserWindow is DESTROYED on close and "Show Dashboard" does nothing.
+  mainWindow.on('close', (event) => {
+    if (!(app as { quitting?: boolean }).quitting) {
+      event.preventDefault()
+      mainWindow?.hide()
+      console.log('Window hidden to tray (not destroyed)')
     }
   })
+
+  // Theme is applied reactively by the renderer via tempo:theme-changed;
+  // nothing to patch here on load or on OS theme changes.
 
   // Load renderer
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -132,11 +128,11 @@ function createWindow() {
     console.log('Loading production renderer')
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
-  
+
   mainWindow.webContents.on('did-finish-load', () => {
     console.log('Renderer loaded successfully')
   })
-  
+
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
     console.error('Failed to load renderer:', errorCode, errorDescription)
   })
@@ -156,6 +152,8 @@ app.on('activate', () => {
 // Cleanup on quit
 app.on('before-quit', () => {
   console.log('App quitting - stopping tracker')
+  // Let close events through so windows actually destroy on quit
+  ;(app as { quitting?: boolean }).quitting = true
   if (tracker) {
     tracker.stop()
   }
@@ -166,6 +164,12 @@ app.on('before-quit', () => {
 powerMonitor.on('lock-screen', () => {
   if (tracker) {
     tracker.handleLock()
+  }
+})
+
+powerMonitor.on('unlock-screen', () => {
+  if (tracker) {
+    tracker.handleUnlock()
   }
 })
 

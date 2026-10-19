@@ -44,6 +44,14 @@ export function createTray(window: BrowserWindow, tracker: Tracker) {
   }
 
   buildMenu()
+
+  // Left-click on the tray icon restores/focuses the dashboard
+  tray.on('click', () => {
+    window.show()
+    if (window.isMinimized()) window.restore()
+    window.focus()
+  })
+
   tracker.addStateListener((state) => {
     tray?.setToolTip(`Tempo - tracking ${state.toLowerCase()}`)
     buildMenu()

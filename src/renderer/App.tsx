@@ -1,4 +1,4 @@
-import { useState, useCallback, type ReactNode } from 'react'
+import { useState, useCallback, useEffect, type ReactNode } from 'react'
 import { useTodayData } from './hooks/useTodayData'
 import TodayView from './components/TodayView'
 import RangeView from './components/RangeView'
@@ -8,6 +8,7 @@ import { Segmented } from './components/ui'
 
 type Nav = 'dashboard' | 'sessions' | 'settings'
 type RangeTab = 'day' | 'week' | 'month'
+type ThemeSetting = 'system' | 'dark' | 'light'
 
 // Local-midnight boundary in ms (local time per spec)
 function todayStart(): number {
@@ -19,6 +20,28 @@ export default function App() {
   const [nav, setNav] = useState<Nav>('dashboard')
   const [rangeTab, setRangeTab] = useState<RangeTab>('day')
   const { summary, sessions, categories, state, refresh } = useTodayData()
+
+  // Theme management: apply/remove the Tailwind `dark` class from main-process state
+  const [theme, setThemeSetting] = useState<ThemeSetting>('dark')
+  useEffect(() => {
+    window.tempoAPI
+      .getTheme()
+      .then((t) => {
+        setThemeSetting(t.theme)
+        document.documentElement.classList.toggle('dark', t.dark)
+      })
+      .catch(() => {})
+    const unsub = window.tempoAPI.onThemeChanged?.((t) => {
+      setThemeSetting(t.theme)
+      document.documentElement.classList.toggle('dark', t.dark)
+    })
+    return () => unsub?.()
+  }, [])
+
+  const changeTheme = (next: ThemeSetting) => {
+    setThemeSetting(next)
+    window.tempoAPI.setTheme(next).catch((err) => console.error('setTheme failed:', err))
+  }
 
   // Bump this to force range/sessions views to refresh
   const [dataVersion, setDataVersion] = useState(0)
@@ -33,9 +56,9 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen flex bg-gray-50 dark:bg-[#0a0d12] text-gray-900 dark:text-gray-100 antialiased">
+    <div className="h-screen flex bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100 antialiased transition-colors duration-200">
       {/* Sidebar */}
-      <aside className="w-52 shrink-0 flex flex-col border-r border-gray-200 dark:border-white/[0.05] bg-white/60 dark:bg-[#0d1117]">
+      <aside className="w-52 shrink-0 flex flex-col border-r border-gray-200 dark:border-white/[0.06] bg-white/60 dark:bg-[#050505]">
         <div className="flex items-center gap-2.5 px-4 h-16">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-sm shadow-indigo-500/30">
             <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -114,7 +137,7 @@ export default function App() {
           {nav === 'settings' && (
             <>
               <h1 className="text-xl font-semibold tracking-tight mb-5">Settings</h1>
-              <SettingsView />
+              <SettingsView theme={theme} onThemeChange={changeTheme} />
             </>
           )}
         </div>

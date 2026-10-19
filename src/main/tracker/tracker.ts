@@ -75,6 +75,14 @@ export class Tracker {
     this.setState('LOCKED')
     this.closeCurrentSession(Date.now())
   }
+
+  handleUnlock() {
+    // Auto-resume tracking after the screen is unlocked (poll stops while LOCKED)
+    if (this.state === 'LOCKED') {
+      console.log('Screen unlocked - resuming tracking')
+      this.setState('TRACKING')
+    }
+  }
   
   handleSuspend() {
     console.log('System suspending - closing session')

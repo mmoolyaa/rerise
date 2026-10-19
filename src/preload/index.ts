@@ -5,6 +5,7 @@ type SessionsReply = import('../main/ipc').SessionsReply
 type RangeSummaryReply = import('../main/ipc').RangeSummaryReply
 type RulesReply = import('../main/ipc').RulesReply
 type RuleRequest = import('../main/ipc').RuleRequest
+type ThemeState = import('../main/theme').ThemeState
 
 export interface RendererAPI {
   getTodaySummary: () => Promise<SummaryReply>
@@ -16,6 +17,11 @@ export interface RendererAPI {
   setStoreTitles: (enabled: boolean) => Promise<void>
   getStoreTitles: () => Promise<boolean>
   getExtensionPairing: () => Promise<{ token: string; port: number }>
+
+  // theme
+  getTheme: () => Promise<ThemeState>
+  setTheme: (theme: 'system' | 'dark' | 'light') => Promise<void>
+  onThemeChanged: (callback: (state: ThemeState) => void) => () => void
 
   getRules: () => Promise<RulesReply>
   saveRule: (rule: RuleRequest) => Promise<{ id: number }>
@@ -49,6 +55,14 @@ const api = {
   setStoreTitles: (enabled: boolean) => ipcRenderer.invoke('tempo:setStoreTitles', enabled),
   getStoreTitles: () => ipcRenderer.invoke('tempo:getStoreTitles'),
   getExtensionPairing: () => ipcRenderer.invoke('tempo:getExtensionPairing'),
+
+  getTheme: () => ipcRenderer.invoke('tempo:getTheme'),
+  setTheme: (theme: 'system' | 'dark' | 'light') => ipcRenderer.invoke('tempo:setTheme', theme),
+  onThemeChanged: (callback: (state: ThemeState) => void) => {
+    const handler = (_event: unknown, state: ThemeState) => callback(state)
+    ipcRenderer.on('tempo:theme-changed', handler)
+    return () => ipcRenderer.removeListener('tempo:theme-changed', handler)
+  },
 
   getRules: () => ipcRenderer.invoke('tempo:getRules'),
   saveRule: (rule: unknown) => ipcRenderer.invoke('tempo:saveRule', rule),

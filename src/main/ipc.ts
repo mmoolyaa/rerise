@@ -29,6 +29,7 @@ import {
 } from './settings/settings'
 import { sessionsToCsv, sessionsToJson } from './export/exportData'
 import { getPairing } from './server'
+import { createThemeStore, type ThemeSetting } from './theme'
 import type { Session, Category, Rule } from './db/types'
 import type { Tracker } from './tracker/tracker'
 import type { TrackingState } from './tracker/types'
@@ -51,6 +52,18 @@ export function lastNDaysRange(n: number): { startMs: number; endMs: number; day
 }
 
 export function registerIpcHandlers(tracker: Tracker) {
+  const themeStore = createThemeStore()
+
+  // ---- theme ----
+  ipcMain.handle('tempo:getTheme', () => {
+    return themeStore.get()
+  })
+  ipcMain.handle('tempo:setTheme', (_e, theme: unknown) => {
+    const allowed: ThemeSetting[] = ['system', 'dark', 'light']
+    if (!allowed.includes(theme as ThemeSetting)) throw new Error('Invalid theme')
+    themeStore.set(theme as ThemeSetting)
+  })
+
   // ---- summaries ----
   ipcMain.handle('tempo:getTodaySummary', (): SummaryReply => {
     const [start, end] = todayRange()
