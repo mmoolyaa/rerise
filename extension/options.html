@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Tempo Pairing</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 420px; margin: 24px auto; padding: 0 16px; }
+    h1 { font-size: 18px; }
+    input, button { font-size: 14px; padding: 8px; margin: 4px 0; }
+    input { width: 100%; box-sizing: border-box; }
+    button { cursor: pointer; }
+    #status { margin-top: 8px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Pair with Tempo</h1>
+  <p>Copy the pairing token from the Tempo dashboard, then paste it here.</p>
+  <input id="token" placeholder="Pairing token" autocomplete="off" />
+  <input id="port" placeholder="Port (default 47321)" autocomplete="off" />
+  <button id="save">Save</button>
+  <button id="test">Test connection</button>
+  <div id="status"></div>
+  <script src="options.js"></script>
+</body>
+</html>
