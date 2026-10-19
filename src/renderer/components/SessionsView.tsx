@@ -8,6 +8,11 @@ export default function SessionsView({ onMutated }: { onMutated: () => void }) {
   const [categories, setCategories] = useState<Category[]>([])
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
+  const [rulePrompt, setRulePrompt] = useState<{
+    kind: 'app' | 'domain'
+    pattern: string
+    categoryName: string
+  } | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -52,26 +57,34 @@ export default function SessionsView({ onMutated }: { onMutated: () => void }) {
     }
   }
 
-  /**
-   * Promotes a session's category into a persistent rule for the app (or the
-   * site domain), then re-applies rules across all history - so the change
-   * applies to every past and future session from that app/site.
-   */
-  const createRuleFromSession = async (s: Session, kind: 'app' | 'domain') => {
+  /** Opens the category picker for creating a permanent rule for this app/site. */
+  const openRulePrompt = (s: Session, kind: 'app' | 'domain') => {
     const pattern = (kind === 'app' ? s.app_name : s.domain)?.trim()
     if (!pattern) return
+    setRulePrompt({ kind, pattern, categoryName: kind === 'app' ? s.app_name : s.domain || pattern })
+  }
+
+  /**
+   * Creates a persistent rule with the user-picked category, then re-applies
+   * rules across all history - so the change applies to every past and future
+   * session from that app/site.
+   */
+  const confirmRule = async (categoryId: number) => {
+    if (!rulePrompt) return
     setBusy(true)
     try {
-      const categoryId = s.category_id ?? 8
       await window.tempoAPI.saveRule({
-        match_type: kind,
-        pattern,
+        match_type: rulePrompt.kind,
+        pattern: rulePrompt.pattern,
         category_id: categoryId,
         // Beat default rules: domains default 90, apps default 50
-        priority: kind === 'domain' ? 95 : 55
+        priority: rulePrompt.kind === 'domain' ? 95 : 55
       })
       const res = await window.tempoAPI.recategorizeAll()
-      flash(`Rule saved: ${kind} "${pattern}" → ${categoryName(categoryId, categories)} (${res.updated} sessions updated)`)
+      flash(
+        `Rule saved: ${rulePrompt.kind} "${rulePrompt.pattern}" → ${categoryName(categoryId, categories)} (${res.updated} sessions updated)`
+      )
+      setRulePrompt(null)
       await load()
       onMutated()
     } catch (e) {
@@ -128,19 +141,19 @@ export default function SessionsView({ onMutated }: { onMutated: () => void }) {
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <button
-                  onClick={() => createRuleFromSession(s, 'app')}
+                  onClick={() => openRulePrompt(s, 'app')}
                   disabled={busy}
                   className={ruleChip}
-                  title={`Make rule: app "${s.app_name}" → ${categoryName(s.category_id ?? 8, categories)}`}
+                  title={`Set every session from "${s.app_name}" to a category`}
                 >
                   app→rule
                 </button>
                 {s.domain && (
                   <button
-                    onClick={() => createRuleFromSession(s, 'domain')}
+                    onClick={() => openRulePrompt(s, 'domain')}
                     disabled={busy}
                     className={ruleChip}
-                    title={`Make rule: site "${s.domain}" → ${categoryName(s.category_id ?? 8, categories)}`}
+                    title={`Set every session on "${s.domain}" to a category`}
                   >
                     site→rule
                   </button>
@@ -162,8 +175,43 @@ export default function SessionsView({ onMutated }: { onMutated: () => void }) {
           ))}
       </div>
 
+      {/* Rule category picker */}
+      {rulePrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setRulePrompt(null)}>
+          <div
+            className="mx-4 w-full max-w-sm rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#0a0b0d] p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-sm font-medium mb-1">Create rule</div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Every session from <b>{rulePrompt.kind === 'app' ? 'app' : 'site'}</b>{' '}
+              <code className="text-[11px]">{rulePrompt.pattern}</code> will be set to — past and future.
+            </p>
+            <div className="flex gap-2 mb-3">
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => confirmRule(c.id)}
+                  disabled={busy}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-gray-200 dark:border-white/[0.08] text-xs hover:bg-gray-50 dark:hover:bg-white/[0.05] disabled:opacity-50 transition-colors"
+                >
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: categoryColor(c.id) }} />
+                  {c.name}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setRulePrompt(null)}
+              className="w-full py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.09] text-gray-600 dark:text-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <p className="px-4 pb-3 text-[11px] text-gray-500 dark:text-gray-500">
-        Tip: set a session's category, then <b>app→rule</b> or <b>site→rule</b> makes it permanent for every past + future session from that app/site.
+        Tip: click <b>app→rule</b> or <b>site→rule</b>, pick a category, and every past + future session from that app/site switches to it.
       </p>
     </Card>
   )
