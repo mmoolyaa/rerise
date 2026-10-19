@@ -184,6 +184,13 @@ export function registerIpcHandlers(tracker: Tracker) {
   })
 
   ipcMain.handle('tempo:getExtensionPairing', (): { token: string; port: number } => getPairing())
+
+  // ---- auto-start (Windows login item) ----
+  ipcMain.handle('tempo:getAutoStart', (): boolean => app.getLoginItemSettings().openAtLogin)
+  ipcMain.handle('tempo:setAutoStart', (_e, enabled: boolean) => {
+    app.setLoginItemSettings({ openAtLogin: Boolean(enabled), path: process.execPath })
+    console.log(`auto-start on login: ${enabled}`)
+  })
 }
 
 // ---- helpers ----

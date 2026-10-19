@@ -185,6 +185,7 @@ function RuleEditor({ categories, onSaved }: { categories: Category[]; onSaved: 
 // ---------- General ----------
 function GeneralTab({ theme, onThemeChange }: { theme?: ThemeSetting; onThemeChange?: (t: ThemeSetting) => void }) {
   const [idle, setIdle] = useState(120)
+  const [autoStart, setAutoStartState] = useState(false)
   const [excludedApps, setExcludedAppsText] = useState('')
   const [excludedDomains, setExcludedDomainsText] = useState('')
   const [storeTitles, setStoreTitles] = useState(true)
@@ -197,6 +198,7 @@ function GeneralTab({ theme, onThemeChange }: { theme?: ThemeSetting; onThemeCha
       setExcludedDomainsText(s.excludedDomains.join(', '))
       setStoreTitles(s.storeTitles)
     })
+    window.tempoAPI.getAutoStart().then(setAutoStartState).catch(() => {})
   }, [])
 
   const save = async () => {
@@ -224,6 +226,18 @@ function GeneralTab({ theme, onThemeChange }: { theme?: ThemeSetting; onThemeCha
         />
         <p className="text-xs text-gray-500">System follows your OS preference. Default: dark.</p>
       </div>
+
+      <label className="flex items-center gap-2 font-medium">
+        <input
+          type="checkbox"
+          checked={autoStart}
+          onChange={async (e) => {
+            setAutoStartState(e.target.checked)
+            await window.tempoAPI.setAutoStart(e.target.checked)
+          }}
+        />
+        Start with Windows (launch at login and keep tracking)
+      </label>
 
       <div>
         <label className="block font-medium mb-1">Idle threshold ({idle}s)</label>

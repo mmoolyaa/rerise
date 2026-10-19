@@ -18,6 +18,10 @@ export interface RendererAPI {
   getStoreTitles: () => Promise<boolean>
   getExtensionPairing: () => Promise<{ token: string; port: number }>
 
+  // auto-start on login
+  getAutoStart: () => Promise<boolean>
+  setAutoStart: (enabled: boolean) => Promise<void>
+
   // theme
   getTheme: () => Promise<ThemeState>
   setTheme: (theme: 'system' | 'dark' | 'light') => Promise<void>
@@ -55,6 +59,9 @@ const api = {
   setStoreTitles: (enabled: boolean) => ipcRenderer.invoke('tempo:setStoreTitles', enabled),
   getStoreTitles: () => ipcRenderer.invoke('tempo:getStoreTitles'),
   getExtensionPairing: () => ipcRenderer.invoke('tempo:getExtensionPairing'),
+
+  getAutoStart: () => ipcRenderer.invoke('tempo:getAutoStart'),
+  setAutoStart: (enabled: boolean) => ipcRenderer.invoke('tempo:setAutoStart', enabled),
 
   getTheme: () => ipcRenderer.invoke('tempo:getTheme'),
   setTheme: (theme: 'system' | 'dark' | 'light') => ipcRenderer.invoke('tempo:setTheme', theme),

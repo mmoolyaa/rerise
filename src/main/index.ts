@@ -42,8 +42,12 @@ if (!gotTheLock) {
   app.whenReady().then(async () => {
     console.log('=== TEMPO APP READY ===')
 
-    // Start tracking automatically after login (Windows/nowhere-else no-op)
-    app.setLoginItemSettings({ openAtLogin: true, path: process.execPath })
+    // Start tracking automatically after login - only for the PACKAGED app.
+    // Dev runs must not repoint the startup registry entry at the dev electron.
+    if (app.isPackaged) {
+      app.setLoginItemSettings({ openAtLogin: true, path: process.execPath })
+      console.log('Auto-start on login enabled (packaged)')
+    }
 
     // Initialize database
     try {
