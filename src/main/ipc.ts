@@ -35,9 +35,17 @@ import type { Tracker } from './tracker/tracker'
 import type { TrackingState } from './tracker/types'
 
 // Local-time day boundaries (local time for dashboard boundaries per spec)
+const DAY_MS = 24 * 60 * 60 * 1000
+
 export function startOfTodayLocal(): number {
   const now = new Date()
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+}
+
+function dayOffset(raw: number): number {
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return 0
+  return Math.min(30, Math.max(0, Math.trunc(n)))
 }
 
 export function todayRange(): [number, number] {
@@ -88,6 +96,21 @@ export function registerIpcHandlers(tracker: Tracker) {
     return { sessions: getSessionsInRange(start, end), categories: getAllCategories() }
   })
 
+  // Data for an arbitrary LOCAL day: offsetDays = 0 (today), 1 (yesterday), ... 30
+  ipcMain.handle('tempo:getDayData', (_e, offsetDays: number): DayDataReply => {
+    const o = dayOffset(offsetDays)
+    const start = startOfTodayLocal() - o * DAY_MS
+    const end = o === 0 ? Date.now() : start + DAY_MS
+    const categories = getAllCategories()
+    return {
+      summary: summarizeSessions(getSessionsInRange(start, end), categories, start, end),
+      sessions: getSessionsInRange(start, end),
+      categories,
+      dayStartMs: start,
+      state: tracker.getState()
+    }
+  })
+
   ipcMain.handle('tempo:getTrackingState', (): TrackingState => tracker.getState())
 
   ipcMain.on('tempo:pauseTracking', () => tracker.pause())
@@ -102,13 +125,22 @@ export function registerIpcHandlers(tracker: Tracker) {
     return { rules: getAllRules(), categories: getAllCategories() }
   })
 
-  ipcMain.handle('tempo:saveRule', (_e, rule: RuleRequest): { id: number } => {
+  ipcMain.handle('tempo:saveRule', (_e, rule: RuleRequest): { id: number; replaced: boolean } => {
     const clean = sanitizeRule(rule)
+    // Upsert semantics: same type + pattern (case-insensitive) updates instead
+    // of silently stacking duplicates.
+    const existing = getAllRules().find(
+      (r) => r.match_type === clean.match_type && r.pattern.toLowerCase() === clean.pattern.toLowerCase()
+    )
+    if (existing) {
+      updateRule(existing.id, clean)
+      return { id: existing.id, replaced: true }
+    }
     if (clean.id) {
       updateRule(clean.id, clean)
-      return { id: clean.id }
+      return { id: clean.id, replaced: false }
     }
-    return { id: insertRule(clean) }
+    return { id: insertRule(clean), replaced: false }
   })
 
   ipcMain.handle('tempo:deleteRule', (_e, id: number) => {
@@ -226,6 +258,15 @@ export interface SummaryReply {
 export interface SessionsReply {
   sessions: Session[]
   categories: Category[]
+}
+
+export interface DayDataReply {
+  summary: TodaySummary
+  sessions: Session[]
+  categories: Category[]
+  /** Local midnight (ms) of the requested day */
+  dayStartMs: number
+  state: TrackingState
 }
 
 export interface RangeSummaryReply {

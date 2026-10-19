@@ -138,6 +138,13 @@ export class Tracker {
       this.closeCurrentSession(Date.now())
       return
     }
+
+    // Never track Tempo itself (dev runs show up as 'Electron')
+    const exe = (win.exePath ?? '').toLowerCase()
+    if (exe && exe === process.execPath.toLowerCase()) {
+      this.closeCurrentSession(Date.now())
+      return
+    }
     
     const now = Date.now()
     const domain = this.platform.isBrowser(win.appName) ? this.getFreshDomain() : undefined

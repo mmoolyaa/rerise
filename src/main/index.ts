@@ -51,9 +51,9 @@ if (!gotTheLock) {
 
     // Initialize database
     try {
-    console.log('Initializing database...')
-    getDatabase()
-    console.log('Database initialized')
+      console.log('Initializing database...')
+      getDatabase()
+      console.log('Database initialized')
     } catch (error) {
       console.error('Database init failed:', error)
     }
@@ -61,14 +61,11 @@ if (!gotTheLock) {
     // Theme preference (system/dark/light) drives renderer class from now on
     initTheme()
 
-    console.log('Creating window...')
-    createWindow()
-
     // Localhost server for the browser extension
     const extension = await startExtensionServer()
 
-    // Create tracker + register IPC handlers immediately so the renderer
-    // never calls an unregistered channel; polling starts after a short delay.
+    // Create tracker + register IPC handlers BEFORE the renderer loads, so
+    // mount-time invoke calls (getTheme etc.) always find their handler.
     tracker = new Tracker()
     if (tracker) tracker.getFreshTab = (now) => extension.getFreshTab(now)
 
@@ -80,6 +77,10 @@ if (!gotTheLock) {
     })
 
     registerIpcHandlers(tracker)
+    console.log('IPC handlers registered')
+
+    console.log('Creating window...')
+    createWindow()
 
     console.log('Creating tray...')
     if (mainWindow) createTray(mainWindow, tracker)

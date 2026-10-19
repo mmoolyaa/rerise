@@ -33,30 +33,6 @@ export default function SessionsView({ onMutated }: { onMutated: () => void }) {
     setTimeout(() => setStatus((s) => (s === msg ? null : s)), 6000)
   }
 
-  const recategorize = async (sessionId: number | undefined, categoryId: number | null) => {
-    if (!sessionId) return
-    setBusy(true)
-    try {
-      await window.tempoAPI.setSessionCategory(sessionId, categoryId)
-      await load()
-      onMutated()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const recategorizeAll = async () => {
-    setBusy(true)
-    try {
-      const res = await window.tempoAPI.recategorizeAll()
-      window.alert(`Re-categorized ${res.updated} sessions with the current rules.`)
-      await load()
-      onMutated()
-    } finally {
-      setBusy(false)
-    }
-  }
-
   /** Opens the category picker for creating a permanent rule for this app/site. */
   const openRulePrompt = (s: Session, kind: 'app' | 'domain') => {
     const pattern = (kind === 'app' ? s.app_name : s.domain)?.trim()
@@ -99,18 +75,7 @@ export default function SessionsView({ onMutated }: { onMutated: () => void }) {
 
   return (
     <Card>
-      <CardHeader
-        title={`Today's sessions (${sessions.length})`}
-        right={
-          <button
-            onClick={recategorizeAll}
-            disabled={busy}
-            className="text-[11px] px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.09] text-gray-600 dark:text-gray-300 disabled:opacity-50 transition-colors"
-          >
-            Re-categorize all
-          </button>
-        }
-      />
+      <CardHeader title={`Today's sessions (${sessions.length})`} />
 
       {status && (
         <div className="mx-4 mb-2 px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-xs text-indigo-700 dark:text-indigo-300">
@@ -158,18 +123,6 @@ export default function SessionsView({ onMutated }: { onMutated: () => void }) {
                     site→rule
                   </button>
                 )}
-                <select
-                  value={s.category_id ?? 8}
-                  disabled={busy}
-                  onChange={(e) => recategorize(s.id, Number(e.target.value))}
-                  className="text-[11px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-300"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
           ))}
@@ -211,7 +164,7 @@ export default function SessionsView({ onMutated }: { onMutated: () => void }) {
       )}
 
       <p className="px-4 pb-3 text-[11px] text-gray-500 dark:text-gray-500">
-        Tip: click <b>app→rule</b> or <b>site→rule</b>, pick a category, and every past + future session from that app/site switches to it.
+        Tip: click <b>app→rule</b> or <b>site→rule</b>, pick a category — every past + future session from that app/site switches to it.
       </p>
     </Card>
   )

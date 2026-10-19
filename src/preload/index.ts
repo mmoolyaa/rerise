@@ -6,11 +6,13 @@ type RangeSummaryReply = import('../main/ipc').RangeSummaryReply
 type RulesReply = import('../main/ipc').RulesReply
 type RuleRequest = import('../main/ipc').RuleRequest
 type ThemeState = import('../main/theme').ThemeState
+type DayDataReply = import('../main/ipc').DayDataReply
 
 export interface RendererAPI {
   getTodaySummary: () => Promise<SummaryReply>
   getRangeSummary: (days: number) => Promise<RangeSummaryReply>
   getSessionsToday: () => Promise<SessionsReply>
+  getDayData: (offsetDays: number) => Promise<DayDataReply>
   getTrackingState: () => Promise<string>
   pauseTracking: () => void
   resumeTracking: () => void
@@ -53,6 +55,7 @@ const api = {
   getTodaySummary: () => ipcRenderer.invoke('tempo:getTodaySummary'),
   getRangeSummary: (days: number) => ipcRenderer.invoke('tempo:getRangeSummary', days),
   getSessionsToday: () => ipcRenderer.invoke('tempo:getSessionsToday'),
+  getDayData: (offsetDays: number) => ipcRenderer.invoke('tempo:getDayData', offsetDays),
   getTrackingState: () => ipcRenderer.invoke('tempo:getTrackingState'),
   pauseTracking: () => ipcRenderer.send('tempo:pauseTracking'),
   resumeTracking: () => ipcRenderer.send('tempo:resumeTracking'),

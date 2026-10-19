@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, type ReactNode } from 'react'
 import { useTodayData } from './hooks/useTodayData'
+import { useDayData } from './hooks/useDayData'
 import TodayView from './components/TodayView'
 import RangeView from './components/RangeView'
 import SessionsView from './components/SessionsView'
@@ -10,45 +11,66 @@ type Nav = 'dashboard' | 'sessions' | 'settings'
 type RangeTab = 'day' | 'week' | 'month'
 type ThemeSetting = 'system' | 'dark' | 'light'
 
+const MAX_DAY_OFFSET = 30
+const DAY_MS = 24 * 60 * 60 * 1000
+
 // Local-midnight boundary in ms (local time per spec)
 function todayStart(): number {
   const now = new Date()
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
 }
 
+function effectiveDark(next: ThemeSetting): boolean {
+  if (next === 'dark') return true
+  if (next === 'light') return false
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true
+}
+
+function applyThemeClass(dark: boolean) {
+  document.documentElement.classList.toggle('dark', dark)
+}
+
 export default function App() {
   const [nav, setNav] = useState<Nav>('dashboard')
   const [rangeTab, setRangeTab] = useState<RangeTab>('day')
-  const { summary, sessions, categories, state, refresh } = useTodayData()
+  const [dayOffset, setDayOffset] = useState(0)
+  const day = useDayData(dayOffset)
+  // Tracker state + pause only (summary comes from useDayData)
+  const { state, refresh: refreshState } = useTodayData()
 
-  // Theme management: apply/remove the Tailwind `dark` class from main-process state
+  const [dataVersion, setDataVersion] = useState(0)
+  const onMutated = useCallback(() => {
+    setDataVersion((v) => v + 1)
+    refreshState()
+  }, [refreshState])
+
+  // Theme management: apply/remove the Tailwind `dark` class from main-process state.
+  // Applied optimistically on selection so the UI always reacts immediately.
   const [theme, setThemeSetting] = useState<ThemeSetting>('dark')
   useEffect(() => {
     window.tempoAPI
       .getTheme()
       .then((t) => {
         setThemeSetting(t.theme)
-        document.documentElement.classList.toggle('dark', t.dark)
+        applyThemeClass(t.dark)
       })
-      .catch(() => {})
+      .catch((err) => console.error('getTheme failed:', err))
     const unsub = window.tempoAPI.onThemeChanged?.((t) => {
       setThemeSetting(t.theme)
-      document.documentElement.classList.toggle('dark', t.dark)
+      applyThemeClass(t.dark)
     })
     return () => unsub?.()
   }, [])
 
   const changeTheme = (next: ThemeSetting) => {
     setThemeSetting(next)
+    applyThemeClass(effectiveDark(next))
     window.tempoAPI.setTheme(next).catch((err) => console.error('setTheme failed:', err))
   }
 
-  // Bump this to force range/sessions views to refresh
-  const [dataVersion, setDataVersion] = useState(0)
-  const onMutated = useCallback(() => {
-    setDataVersion((v) => v + 1)
-    refresh()
-  }, [refresh])
+  const navDay = (delta: number) => {
+    setDayOffset((o) => Math.min(MAX_DAY_OFFSET, Math.max(0, o + delta)))
+  }
 
   const togglePause = () => {
     if (state === 'PAUSED') window.tempoAPI.resumeTracking()
@@ -95,28 +117,76 @@ export default function App() {
           {nav === 'dashboard' && (
             <>
               <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h1 className="text-xl font-semibold tracking-tight">
-                    {rangeTab === 'day' ? 'Today' : rangeTab === 'week' ? 'Last 7 days' : 'Last 30 days'}
-                  </h1>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                    {rangeTab === 'day'
-                      ? new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
-                      : 'Productivity overview'}
-                  </p>
+                <div className="flex items-center gap-3">
+                  {rangeTab === 'day' && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => navDay(1)}
+                        disabled={dayOffset >= MAX_DAY_OFFSET}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.09] text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors"
+                        title="Older"
+                      >
+                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                      </button>
+                      <button
+                        onClick={() => navDay(-1)}
+                        disabled={dayOffset === 0}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.09] text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors"
+                        title="Newer"
+                      >
+                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                      </button>
+                    </div>
+                  )}
+                  <div>
+                    <h1 className="text-xl font-semibold tracking-tight">
+                      {rangeTab === 'day'
+                        ? dayOffset === 0
+                          ? 'Today'
+                          : dayOffset === 1
+                            ? 'Yesterday'
+                            : new Date(todayStart() - dayOffset * DAY_MS).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
+                        : rangeTab === 'week'
+                          ? 'Last 7 days'
+                          : 'Last 30 days'}
+                    </h1>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                      {rangeTab === 'day'
+                        ? new Date(todayStart() - dayOffset * DAY_MS).toLocaleDateString(
+                            [],
+                            { weekday: 'long', month: 'long', day: 'numeric' }
+                          )
+                        : 'Productivity overview'}
+                    </p>
+                  </div>
                 </div>
-                <Segmented
-                  value={rangeTab}
-                  onChange={setRangeTab}
-                  options={[
-                    { value: 'day', label: 'Day' },
-                    { value: 'week', label: 'Week' },
-                    { value: 'month', label: 'Month' }
-                  ]}
-                />
+                <div className="flex items-center gap-2">
+                  {rangeTab === 'day' && dayOffset !== 0 && (
+                    <button
+                      onClick={() => setDayOffset(0)}
+                      className="text-[11px] px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.09] text-gray-600 dark:text-gray-300 transition-colors"
+                    >
+                      Today
+                    </button>
+                  )}
+                  <Segmented
+                    value={rangeTab}
+                    onChange={setRangeTab}
+                    options={[
+                      { value: 'day', label: 'Day' },
+                      { value: 'week', label: 'Week' },
+                      { value: 'month', label: 'Month' }
+                    ]}
+                  />
+                </div>
               </div>
               {rangeTab === 'day' && (
-                <TodayView summary={summary} sessions={sessions} categories={categories} dayStartMs={todayStart()} />
+                <TodayView
+                  summary={day.data?.summary ?? null}
+                  sessions={day.data?.sessions ?? []}
+                  categories={day.data?.categories ?? []}
+                  dayStartMs={day.data?.dayStartMs ?? todayStart()}
+                />
               )}
               {rangeTab !== 'day' && (
                 <RangeView
