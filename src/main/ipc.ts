@@ -120,12 +120,14 @@ export function registerIpcHandlers(tracker: Tracker) {
     const rules = getAllRules()
     const categorizer = createCategorizer(rules)
     const db = getDatabase()
+    // Materialize rows first: better-sqlite3 forbids running another statement
+    // on the same connection while an .iterate() cursor is still open.
     let updated = 0
     db.transaction(() => {
-      for (const row of db.prepare('SELECT * FROM sessions').iterate() as IterableIterator<Session> & { id: number }) {
+      for (const row of db.prepare('SELECT * FROM sessions').all() as (Session & { id: number })[]) {
         const cat = categorizer.categorize(row)
         if (row.category_id !== cat) {
-          updateSessionCategory(row.id as unknown as number, cat)
+          updateSessionCategory(row.id, cat)
           updated++
         }
       }
