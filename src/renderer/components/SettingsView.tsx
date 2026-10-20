@@ -313,7 +313,7 @@ function GeneralTab({ theme, onThemeChange }: { theme?: ThemeSetting; onThemeCha
             { value: 'light', label: 'Light' }
           ]}
         />
-        <p className="text-xs text-gray-500">System follows your OS preference. Default: dark.</p>
+        <p className="text-xs text-gray-500">System follows your OS preference. Default: light.</p>
       </div>
 
       <label className="flex items-center gap-2 font-medium">

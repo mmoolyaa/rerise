@@ -37,8 +37,8 @@ describe('summarizeSessions', () => {
       session(40 * min, 50 * min, 8, 'Calc.exe')
     ]
     const r = summarizeSessions(sessions, categories, 0, 50 * min)
-    expect(r.topApps[0]).toEqual({ name: 'Code.exe', durationMs: 40 * min })
-    expect(r.topApps[1]).toEqual({ name: 'Calc.exe', durationMs: 10 * min })
+    expect(r.topApps[0]).toMatchObject({ name: 'Code.exe', durationMs: 40 * min })
+    expect(r.topApps[1]).toMatchObject({ name: 'Calc.exe', durationMs: 10 * min })
   })
 
   it('aggregates top sites by domain', () => {
@@ -48,8 +48,8 @@ describe('summarizeSessions', () => {
       session(14 * min, 20 * min, 9, 'brave.exe', 'instagram.com')
     ]
     const r = summarizeSessions(sessions, categories, 0, 20 * min)
-    expect(r.topSites[0]).toEqual({ name: 'github.com', durationMs: 14 * min })
-    expect(r.topSites[1]).toEqual({ name: 'instagram.com', durationMs: 6 * min })
+    expect(r.topSites[0]).toMatchObject({ name: 'github.com', durationMs: 14 * min, category_id: 1 })
+    expect(r.topSites[1]).toMatchObject({ name: 'instagram.com', durationMs: 6 * min, category_id: 9 })
   })
 
   it('counts uncategorized time including null category', () => {

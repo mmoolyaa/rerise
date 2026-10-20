@@ -7,6 +7,8 @@ const MIN_SESSION_DURATION_MS = 3000
 export interface TopEntry {
   name: string
   durationMs: number
+  // Dominant (longest) category for this app/site, if any
+  category_id?: number
 }
 
 export interface TodaySummary {
@@ -45,16 +47,22 @@ export function summarizeSessions(
     .reduce((sum, s) => sum + (s.ended_at - s.started_at), 0)
 
   const byName = (key: (s: Session) => string | undefined) => {
-    const map = new Map<string, number>()
+    const map = new Map<string, { durationMs: number; cats: Map<number, number> }>()
     for (const s of sessions) {
       const dur = s.ended_at - s.started_at
       if (dur < MIN_SESSION_DURATION_MS) continue
       const k = key(s)
       if (!k) continue
-      map.set(k, (map.get(k) ?? 0) + dur)
+      const entry = map.get(k) ?? { durationMs: 0, cats: new Map<number, number>() }
+      entry.durationMs += dur
+      if (s.category_id) entry.cats.set(s.category_id, (entry.cats.get(s.category_id) ?? 0) + dur)
+      map.set(k, entry)
     }
     return [...map.entries()]
-      .map(([name, durationMs]) => ({ name, durationMs }))
+      .map((entry) => {
+        const dominantCat = [...entry[1].cats.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
+        return { name: entry[0], durationMs: entry[1].durationMs, category_id: dominantCat }
+      })
       .sort((a, b) => b.durationMs - a.durationMs)
       .slice(0, 5)
   }

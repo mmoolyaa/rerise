@@ -1,22 +1,11 @@
 import { useState, useCallback, useEffect, type ReactNode } from 'react'
-import { useTodayData } from './hooks/useTodayData'
-import { useDayData } from './hooks/useDayData'
-import TodayView from './components/TodayView'
 import StatsView from './components/StatsView'
 import SessionsView from './components/SessionsView'
 import SettingsView from './components/SettingsView'
+import { useTodayData } from './hooks/useTodayData'
 
-type Nav = 'timer' | 'stats' | 'sessions' | 'settings'
+type Nav = 'stats' | 'sessions' | 'settings'
 type ThemeSetting = 'system' | 'dark' | 'light'
-
-const MAX_DAY_OFFSET = 30
-const DAY_MS = 24 * 60 * 60 * 1000
-
-// Local-midnight boundary in ms (local time per spec)
-function todayStart(): number {
-  const now = new Date()
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-}
 
 function effectiveDark(next: ThemeSetting): boolean {
   if (next === 'dark') return true
@@ -30,9 +19,7 @@ function applyThemeClass(dark: boolean) {
 
 export default function App() {
   const [nav, setNav] = useState<Nav>('stats')
-  const [dayOffset, setDayOffset] = useState(0)
-  const day = useDayData(dayOffset)
-  // Tracker state + pause only (summary comes from useDayData)
+  // Tracker state + pause only
   const { state, refresh: refreshState } = useTodayData()
 
   const [dataVersion, setDataVersion] = useState(0)
@@ -43,7 +30,7 @@ export default function App() {
 
   // Theme management: apply/remove the Tailwind `dark` class from main-process state.
   // Applied optimistically on selection so the UI always reacts immediately.
-  const [theme, setThemeSetting] = useState<ThemeSetting>('dark')
+  const [theme, setThemeSetting] = useState<ThemeSetting>('light')
   useEffect(() => {
     window.tempoAPI
       .getTheme()
@@ -65,10 +52,6 @@ export default function App() {
     window.tempoAPI.setTheme(next).catch((err) => console.error('setTheme failed:', err))
   }
 
-  const navDay = (delta: number) => {
-    setDayOffset((o) => Math.min(MAX_DAY_OFFSET, Math.max(0, o + delta)))
-  }
-
   const togglePause = () => {
     if (state === 'PAUSED') window.tempoAPI.resumeTracking()
     else window.tempoAPI.pauseTracking()
@@ -80,7 +63,6 @@ export default function App() {
       <header className="fixed top-4 inset-x-0 z-40 flex justify-center pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
           <nav className="flex items-center gap-0.5 rounded-full bg-white dark:bg-[#0a0b0d] border border-gray-200/70 dark:border-white/[0.07] shadow-sm px-1.5 py-1.5">
-            <PillItem active={nav === 'timer'} onClick={() => setNav('timer')} label="Timer" icon={<IconTimer />} />
             <PillItem active={nav === 'stats'} onClick={() => setNav('stats')} label="Stats" icon={<IconStats />} />
             <PillItem active={nav === 'sessions'} onClick={() => setNav('sessions')} label="Sessions" icon={<IconList />} />
             <PillItem active={nav === 'settings'} onClick={() => setNav('settings')} label="Settings" icon={<IconSliders />} />
@@ -104,61 +86,6 @@ export default function App() {
       {/* Content */}
       <main className="pt-20">
         <div className="mx-auto max-w-6xl px-8 pb-16">
-          {nav === 'timer' && (
-            <>
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => navDay(1)}
-                      disabled={dayOffset >= MAX_DAY_OFFSET}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center bg-white dark:bg-white/[0.05] border border-gray-200/70 dark:border-white/[0.07] hover:bg-gray-100 dark:hover:bg-white/[0.09] text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors"
-                      title="Older"
-                    >
-                      <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-                    </button>
-                    <button
-                      onClick={() => navDay(-1)}
-                      disabled={dayOffset === 0}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center bg-white dark:bg-white/[0.05] border border-gray-200/70 dark:border-white/[0.07] hover:bg-gray-100 dark:hover:bg-white/[0.09] text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors"
-                      title="Newer"
-                    >
-                      <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-                    </button>
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-semibold tracking-tight">
-                      {dayOffset === 0
-                        ? 'Today'
-                        : dayOffset === 1
-                          ? 'Yesterday'
-                          : new Date(todayStart() - dayOffset * DAY_MS).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
-                    </h1>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                      {new Date(todayStart() - dayOffset * DAY_MS).toLocaleDateString(
-                        [],
-                        { weekday: 'long', month: 'long', day: 'numeric' }
-                      )}
-                    </p>
-                  </div>
-                </div>
-                {dayOffset !== 0 && (
-                  <button
-                    onClick={() => setDayOffset(0)}
-                    className="text-[11px] px-2.5 py-1 rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200/70 dark:border-white/[0.07] hover:bg-gray-100 dark:hover:bg-white/[0.09] text-gray-600 dark:text-gray-300 transition-colors"
-                  >
-                    Today
-                  </button>
-                )}
-              </div>
-              <TodayView
-                summary={day.data?.summary ?? null}
-                sessions={day.data?.sessions ?? []}
-                categories={day.data?.categories ?? []}
-                dayStartMs={day.data?.dayStartMs ?? todayStart()}
-              />
-            </>
-          )}
           {nav === 'stats' && <StatsView key={`stats-${dataVersion}`} />}
           {nav === 'sessions' && (
             <>
@@ -193,15 +120,6 @@ function PillItem({ active, onClick, label, icon }: { active: boolean; onClick: 
       <span className={active ? '' : 'opacity-70'}>{icon}</span>
       {label}
     </button>
-  )
-}
-
-function IconTimer() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" />
-    </svg>
   )
 }
 

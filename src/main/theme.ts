@@ -18,7 +18,7 @@ const KEY = 'theme'
 
 function setting(): ThemeSetting {
   const raw = getSetting(KEY)
-  return raw === 'light' || raw === 'dark' || raw === 'system' ? raw : 'dark'
+  return raw === 'light' || raw === 'dark' || raw === 'system' ? raw : 'light'
 }
 
 function state(): ThemeState {
