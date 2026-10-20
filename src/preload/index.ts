@@ -13,6 +13,7 @@ export interface RendererAPI {
   getRangeSummary: (days: number) => Promise<RangeSummaryReply>
   getSessionsToday: () => Promise<SessionsReply>
   getDayData: (offsetDays: number) => Promise<DayDataReply>
+  getStreak: () => Promise<number>
   getTrackingState: () => Promise<string>
   pauseTracking: () => void
   resumeTracking: () => void
@@ -56,6 +57,7 @@ const api = {
   getRangeSummary: (days: number) => ipcRenderer.invoke('tempo:getRangeSummary', days),
   getSessionsToday: () => ipcRenderer.invoke('tempo:getSessionsToday'),
   getDayData: (offsetDays: number) => ipcRenderer.invoke('tempo:getDayData', offsetDays),
+  getStreak: () => ipcRenderer.invoke('tempo:getStreak'),
   getTrackingState: () => ipcRenderer.invoke('tempo:getTrackingState'),
   pauseTracking: () => ipcRenderer.send('tempo:pauseTracking'),
   resumeTracking: () => ipcRenderer.send('tempo:resumeTracking'),

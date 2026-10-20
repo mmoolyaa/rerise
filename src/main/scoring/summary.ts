@@ -17,6 +17,8 @@ export interface TodaySummary {
   coveragePercent: number
   // time categorized as Neutral (category 8 or null)
   uncategorizedMs: number
+  // count of meaningful (>= MIN_SESSION_DURATION_MS) sessions in the period
+  sessionCount: number
   topApps: TopEntry[]
   topSites: TopEntry[]
 }
@@ -33,6 +35,7 @@ export function summarizeSessions(
 ): TodaySummary {
   const { score, trackedTimeMs } = computeScore(sessions, categories)
   const focusTimeMs = computeFocusTime(sessions, categories)
+  const sessionCount = sessions.filter((s) => s.ended_at - s.started_at >= MIN_SESSION_DURATION_MS).length
 
   const periodLength = Math.max(1, periodEndMs - periodStartMs)
   const coveragePercent = Math.min(100, (trackedTimeMs / periodLength) * 100)
@@ -62,6 +65,7 @@ export function summarizeSessions(
     focusTimeMs,
     coveragePercent: Math.round(coveragePercent),
     uncategorizedMs,
+    sessionCount,
     topApps: byName((s) => s.app_name),
     topSites: byName((s) => s.domain)
   }

@@ -34,3 +34,17 @@ export function scoreTone(score: number): string {
   if (score >= 20) return 'text-orange-500'
   return 'text-red-500'
 }
+
+// Deterministic pastel background for app/site favicon stand-ins
+const CHIP_COLORS = ['#c4714b', '#7c6bd6', '#3b8f6c', '#4a7fd4', '#b3569a', '#c9a227', '#5f6b7a']
+
+export function chipColor(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0
+  return CHIP_COLORS[Math.abs(hash) % CHIP_COLORS.length]
+}
+
+export function chipInitial(name: string): string {
+  const s = name.replace(/\.[^.]+$/, '').trim()
+  return (s[0] ?? '?').toUpperCase()
+}

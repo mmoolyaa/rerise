@@ -2,13 +2,11 @@ import { useState, useCallback, useEffect, type ReactNode } from 'react'
 import { useTodayData } from './hooks/useTodayData'
 import { useDayData } from './hooks/useDayData'
 import TodayView from './components/TodayView'
-import RangeView from './components/RangeView'
+import StatsView from './components/StatsView'
 import SessionsView from './components/SessionsView'
 import SettingsView from './components/SettingsView'
-import { Segmented } from './components/ui'
 
-type Nav = 'dashboard' | 'sessions' | 'settings'
-type RangeTab = 'day' | 'week' | 'month'
+type Nav = 'timer' | 'stats' | 'sessions' | 'settings'
 type ThemeSetting = 'system' | 'dark' | 'light'
 
 const MAX_DAY_OFFSET = 30
@@ -31,8 +29,7 @@ function applyThemeClass(dark: boolean) {
 }
 
 export default function App() {
-  const [nav, setNav] = useState<Nav>('dashboard')
-  const [rangeTab, setRangeTab] = useState<RangeTab>('day')
+  const [nav, setNav] = useState<Nav>('stats')
   const [dayOffset, setDayOffset] = useState(0)
   const day = useDayData(dayOffset)
   // Tracker state + pause only (summary comes from useDayData)
@@ -78,135 +75,102 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen flex bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100 antialiased transition-colors duration-200">
-      {/* Sidebar */}
-      <aside className="w-52 shrink-0 flex flex-col border-r border-gray-200 dark:border-white/[0.06] bg-white/60 dark:bg-[#050505]">
-        <div className="flex items-center gap-2.5 px-4 h-16">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-sm shadow-indigo-500/30">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 7v5l3 2" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-[15px] font-semibold leading-4">Tempo</div>
-            <div className="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">local-only tracker</div>
-          </div>
-        </div>
-
-        <nav className="px-2 mt-2 space-y-0.5">
-          <NavItem active={nav === 'dashboard'} onClick={() => setNav('dashboard')} label="Dashboard" icon={<IconDashboard />} />
-          <NavItem active={nav === 'sessions'} onClick={() => setNav('sessions')} label="Sessions" icon={<IconList />} />
-          <NavItem active={nav === 'settings'} onClick={() => setNav('settings')} label="Settings" icon={<IconGear />} />
-        </nav>
-
-        <div className="mt-auto px-4 py-3 border-t border-gray-200 dark:border-white/[0.05]">
-          <StateChip state={state} />
+    <div className="min-h-screen bg-[#faf9f6] dark:bg-black text-gray-900 dark:text-gray-100 antialiased transition-colors duration-200">
+      {/* Floating pill navigation */}
+      <header className="fixed top-4 inset-x-0 z-40 flex justify-center pointer-events-none">
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <nav className="flex items-center gap-0.5 rounded-full bg-white dark:bg-[#0a0b0d] border border-gray-200/70 dark:border-white/[0.07] shadow-sm px-1.5 py-1.5">
+            <PillItem active={nav === 'timer'} onClick={() => setNav('timer')} label="Timer" icon={<IconTimer />} />
+            <PillItem active={nav === 'stats'} onClick={() => setNav('stats')} label="Stats" icon={<IconStats />} />
+            <PillItem active={nav === 'sessions'} onClick={() => setNav('sessions')} label="Sessions" icon={<IconList />} />
+            <PillItem active={nav === 'settings'} onClick={() => setNav('settings')} label="Settings" icon={<IconSliders />} />
+          </nav>
           <button
             onClick={togglePause}
-            className="mt-2 w-full text-xs py-1.5 rounded-lg bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.09] text-gray-600 dark:text-gray-300 transition-colors"
+            title={state === 'PAUSED' ? 'Resume tracking' : 'Pause tracking'}
+            className="flex items-center gap-1.5 rounded-full bg-white dark:bg-[#0a0b0d] border border-gray-200/70 dark:border-white/[0.07] shadow-sm pl-2.5 pr-3 py-2 hover:bg-gray-50 dark:hover:bg-white/[0.05] transition-colors"
           >
-            {state === 'PAUSED' ? 'Resume tracking' : 'Pause tracking'}
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              state === 'TRACKING' ? 'bg-emerald-500 animate-pulse' : state === 'PAUSED' ? 'bg-amber-500' : 'bg-gray-400'
+            }`} />
+            <span className={`text-[11px] ${state === 'PAUSED' ? 'text-amber-600 dark:text-amber-500' : 'text-gray-500 dark:text-gray-400'}`}>
+              {state === 'PAUSED' ? 'Paused' : 'Tracking'}
+            </span>
+            {state === 'PAUSED' ? <IconPlay /> : <IconPause />}
           </button>
         </div>
-      </aside>
+      </header>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-5xl px-6 py-6">
-          {nav === 'dashboard' && (
+      <main className="pt-20">
+        <div className="mx-auto max-w-6xl px-8 pb-16">
+          {nav === 'timer' && (
             <>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  {rangeTab === 'day' && (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => navDay(1)}
-                        disabled={dayOffset >= MAX_DAY_OFFSET}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.09] text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors"
-                        title="Older"
-                      >
-                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-                      </button>
-                      <button
-                        onClick={() => navDay(-1)}
-                        disabled={dayOffset === 0}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.09] text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors"
-                        title="Newer"
-                      >
-                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => navDay(1)}
+                      disabled={dayOffset >= MAX_DAY_OFFSET}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center bg-white dark:bg-white/[0.05] border border-gray-200/70 dark:border-white/[0.07] hover:bg-gray-100 dark:hover:bg-white/[0.09] text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors"
+                      title="Older"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                    </button>
+                    <button
+                      onClick={() => navDay(-1)}
+                      disabled={dayOffset === 0}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center bg-white dark:bg-white/[0.05] border border-gray-200/70 dark:border-white/[0.07] hover:bg-gray-100 dark:hover:bg-white/[0.09] text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors"
+                      title="Newer"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                    </button>
+                  </div>
                   <div>
                     <h1 className="text-xl font-semibold tracking-tight">
-                      {rangeTab === 'day'
-                        ? dayOffset === 0
-                          ? 'Today'
-                          : dayOffset === 1
-                            ? 'Yesterday'
-                            : new Date(todayStart() - dayOffset * DAY_MS).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
-                        : rangeTab === 'week'
-                          ? 'Last 7 days'
-                          : 'Last 30 days'}
+                      {dayOffset === 0
+                        ? 'Today'
+                        : dayOffset === 1
+                          ? 'Yesterday'
+                          : new Date(todayStart() - dayOffset * DAY_MS).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
                     </h1>
                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                      {rangeTab === 'day'
-                        ? new Date(todayStart() - dayOffset * DAY_MS).toLocaleDateString(
-                            [],
-                            { weekday: 'long', month: 'long', day: 'numeric' }
-                          )
-                        : 'Productivity overview'}
+                      {new Date(todayStart() - dayOffset * DAY_MS).toLocaleDateString(
+                        [],
+                        { weekday: 'long', month: 'long', day: 'numeric' }
+                      )}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {rangeTab === 'day' && dayOffset !== 0 && (
-                    <button
-                      onClick={() => setDayOffset(0)}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.09] text-gray-600 dark:text-gray-300 transition-colors"
-                    >
-                      Today
-                    </button>
-                  )}
-                  <Segmented
-                    value={rangeTab}
-                    onChange={setRangeTab}
-                    options={[
-                      { value: 'day', label: 'Day' },
-                      { value: 'week', label: 'Week' },
-                      { value: 'month', label: 'Month' }
-                    ]}
-                  />
-                </div>
+                {dayOffset !== 0 && (
+                  <button
+                    onClick={() => setDayOffset(0)}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200/70 dark:border-white/[0.07] hover:bg-gray-100 dark:hover:bg-white/[0.09] text-gray-600 dark:text-gray-300 transition-colors"
+                  >
+                    Today
+                  </button>
+                )}
               </div>
-              {rangeTab === 'day' && (
-                <TodayView
-                  summary={day.data?.summary ?? null}
-                  sessions={day.data?.sessions ?? []}
-                  categories={day.data?.categories ?? []}
-                  dayStartMs={day.data?.dayStartMs ?? todayStart()}
-                />
-              )}
-              {rangeTab !== 'day' && (
-                <RangeView
-                  key={`${rangeTab}-${dataVersion}`}
-                  days={rangeTab === 'week' ? 7 : 30}
-                  fetcher={(d) => window.tempoAPI.getRangeSummary(d)}
-                  label={rangeTab}
-                />
-              )}
+              <TodayView
+                summary={day.data?.summary ?? null}
+                sessions={day.data?.sessions ?? []}
+                categories={day.data?.categories ?? []}
+                dayStartMs={day.data?.dayStartMs ?? todayStart()}
+              />
             </>
           )}
+          {nav === 'stats' && <StatsView key={`stats-${dataVersion}`} />}
           {nav === 'sessions' && (
             <>
-              <h1 className="text-xl font-semibold tracking-tight mb-5">Sessions</h1>
+              <h1 className="text-2xl font-bold tracking-tight mb-1">Sessions</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mb-5">Today's tracked activity, rule by rule.</p>
               <SessionsView key={`sessions-${dataVersion}`} onMutated={onMutated} />
             </>
           )}
           {nav === 'settings' && (
             <>
-              <h1 className="text-xl font-semibold tracking-tight mb-5">Settings</h1>
+              <h1 className="text-2xl font-bold tracking-tight mb-1">Settings</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mb-5">Rules, privacy, and appearance.</p>
               <SettingsView theme={theme} onThemeChange={changeTheme} />
             </>
           )}
@@ -216,64 +180,71 @@ export default function App() {
   )
 }
 
-function NavItem({ active, onClick, label, icon }: { active: boolean; onClick: () => void; label: string; icon: ReactNode }) {
+function PillItem({ active, onClick, label, icon }: { active: boolean; onClick: () => void; label: string; icon: ReactNode }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[13px] transition-colors ${
         active
-          ? 'bg-gray-100 dark:bg-white/[0.07] text-gray-900 dark:text-white font-medium'
-          : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/70 dark:hover:bg-white/[0.04] hover:text-gray-900 dark:hover:text-gray-200'
+          ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium'
+          : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-gray-200'
       }`}
     >
-      <span className={active ? 'text-indigo-500' : 'text-gray-400 dark:text-gray-500'}>{icon}</span>
+      <span className={active ? '' : 'opacity-70'}>{icon}</span>
       {label}
     </button>
   )
 }
 
-function IconDashboard() {
+function IconTimer() {
   return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="9" rx="1.5" />
-      <rect x="14" y="3" width="7" height="5" rx="1.5" />
-      <rect x="14" y="12" width="7" height="9" rx="1.5" />
-      <rect x="3" y="16" width="7" height="5" rx="1.5" />
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  )
+}
+
+function IconStats() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 20V10" /><path d="M10 20V4" /><path d="M16 20v-7" /><path d="M22 20H2" strokeWidth="2" />
     </svg>
   )
 }
 
 function IconList() {
   return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
       <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
     </svg>
   )
 }
 
-function IconGear() {
+function IconSliders() {
   return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" />
+      <path d="M2 14h4M10 8h4M18 16h4" />
+    </svg>
+  )
+}
+
+function IconPause() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-3 h-3 text-gray-500 dark:text-gray-400" fill="currentColor">
+      <rect x="7" y="5" width="3.5" height="14" rx="1" />
+      <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
+    </svg>
+  )
+}
+
+function IconPlay() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-3 h-3 text-emerald-500" fill="currentColor">
+      <path d="M8 5.5v13a1 1 0 0 0 1.53.85l10-6.5a1 1 0 0 0 0-1.7l-10-6.5A1 1 0 0 0 8 5.5z" />
     </svg>
   )
 }
 
 type TrackingState = 'TRACKING' | 'PAUSED' | 'IDLE' | 'LOCKED'
-
-function StateChip({ state }: { state: TrackingState }) {
-  const config: Record<TrackingState, { label: string; dot: string }> = {
-    TRACKING: { label: 'Tracking', dot: 'bg-emerald-500 animate-pulse' },
-    PAUSED: { label: 'Paused', dot: 'bg-amber-500' },
-    IDLE: { label: 'Idle', dot: 'bg-gray-400' },
-    LOCKED: { label: 'Locked', dot: 'bg-gray-400' }
-  }
-  const c = config[state]
-  return (
-    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-      <span className={`w-2 h-2 rounded-full ${c.dot}`} />
-      {c.label}
-    </div>
-  )
-}

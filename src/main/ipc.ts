@@ -30,6 +30,7 @@ import {
 import { sessionsToCsv, sessionsToJson } from './export/exportData'
 import { getPairing } from './server'
 import { createThemeStore, type ThemeSetting } from './theme'
+import { computeStreak, ymdKey } from './scoring/streak'
 import type { Session, Category, Rule } from './db/types'
 import type { Tracker } from './tracker/tracker'
 import type { TrackingState } from './tracker/types'
@@ -112,6 +113,19 @@ export function registerIpcHandlers(tracker: Tracker) {
   })
 
   ipcMain.handle('tempo:getTrackingState', (): TrackingState => tracker.getState())
+
+  // Consecutive-day streak (>=3s tracked time per local day), with a grace
+  // period: today not active yet still counts yesterday's streak.
+  ipcMain.handle('tempo:getStreak', (): number => {
+    const end = Date.now()
+    const start = end - 366 * DAY_MS
+    const activeDays = new Set(
+      getSessionsInRange(start, end)
+        .filter((s) => s.ended_at - s.started_at >= 3000)
+        .map((s) => ymdKey(s.started_at))
+    )
+    return computeStreak(activeDays, ymdKey(end))
+  })
 
   ipcMain.on('tempo:pauseTracking', () => tracker.pause())
   ipcMain.on('tempo:resumeTracking', () => tracker.resume())
