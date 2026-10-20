@@ -41,13 +41,15 @@ describe('summarizeSessions', () => {
     expect(r.topApps[1]).toMatchObject({ name: 'Calc.exe', durationMs: 10 * min })
   })
 
-  it('aggregates top sites by domain', () => {
+  it('aggregates top sites by domain and keeps site time out of the app split', () => {
     const sessions = [
       session(0, 10 * min, 1, 'brave.exe', 'github.com'),
       session(10 * min, 14 * min, 1, 'brave.exe', 'github.com'),
-      session(14 * min, 20 * min, 9, 'brave.exe', 'instagram.com')
+      session(14 * min, 20 * min, 9, 'brave.exe', 'instagram.com'),
+      session(20 * min, 30 * min, 10, 'Code.exe') // no domain -> counts as app time
     ]
-    const r = summarizeSessions(sessions, categories, 0, 20 * min)
+    const r = summarizeSessions(sessions, categories, 0, 30 * min)
+    expect(r.topApps).toEqual([{ name: 'Code.exe', durationMs: 10 * min, category_id: 10 }])
     expect(r.topSites[0]).toMatchObject({ name: 'github.com', durationMs: 14 * min, category_id: 1 })
     expect(r.topSites[1]).toMatchObject({ name: 'instagram.com', durationMs: 6 * min, category_id: 9 })
   })

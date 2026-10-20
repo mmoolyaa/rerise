@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import type { TodaySummary, Session, Category, CategorySlice } from '../types'
 import { useDayData } from '../hooks/useDayData'
 import { useRangeData, type RangeDays } from '../hooks/useRangeData'
@@ -125,76 +125,71 @@ export default function StatsView() {
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-5">
-        <StatCard label="Focus time" value={summary ? formatDuration(summary.focusTimeMs) : '--'} sub={RANGE_LABEL[range as Exclude<RangeDays, 0>]} />
-        <StatCard label="Score" value={summary?.score == null ? '--' : String(Math.round(summary.score))} sub={isToday ? 'productivity' : 'avg productivity'} />
-        <StatCard label="Sessions" value={summary ? String(summary.sessionCount) : '--'} sub="focus blocks" />
-        <StatCard label="Streak" value={String(streak)} sub="days" />
-        <StatCard label="Top activity" value="" sub="tracked apps" className="col-span-2 md:col-span-1">
-          <div className="mt-2 flex items-center gap-2 min-h-[30px]">
-            {(summary?.topApps ?? []).slice(0, 4).map((a) => (
-              <span
-                key={a.name}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-semibold text-white shrink-0 shadow-sm"
-                style={{ backgroundColor: chipColor(a.name) }}
-                title={a.name}
-              >
-                {chipInitial(a.name)}
-              </span>
-            ))}
-            {(summary?.topApps ?? []).length === 0 && (
-              <span className="text-[13px] text-gray-400 dark:text-gray-600 font-normal">No data yet</span>
-            )}
+      {/* Main column + donut sidebar */}
+      <div className="grid xl:grid-cols-[1fr_272px] gap-5 items-start">
+        <div className="min-w-0 space-y-5">
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            <StatCard label="Focus time" value={summary ? formatDuration(summary.focusTimeMs) : '--'} sub={RANGE_LABEL[range as Exclude<RangeDays, 0>]} />
+            <StatCard label="Score" value={summary?.score == null ? '--' : String(Math.round(summary.score))} sub={isToday ? 'productivity' : 'avg productivity'} />
+            <StatCard label="Sessions" value={summary ? String(summary.sessionCount) : '--'} sub="focus blocks" />
+            <StatCard label="Streak" value={String(streak)} sub="days" />
           </div>
-        </StatCard>
-      </div>
 
-      {/* Today: session timeline */}
-      {isToday && sessions.length > 0 && (
-        <Timeline sessions={sessions} categories={categories} dayStartMs={dayStartMs} />
-      )}
-
-      {/* Focused time chart: hourly for today, daily for ranges */}
-      <div className={`${CARD_CLS} mt-5 mb-9`}>
-        <div className="flex items-center justify-between px-6 pt-5 pb-4">
-          <h2 className="text-lg font-bold">Focused Time</h2>
-          <span className="text-xs text-gray-500 dark:text-gray-500">
-            {summary
-              ? isToday
-                ? `${formatDuration(summary.trackedTimeMs)} ${dayOffset === 0 ? 'today' : 'that day'} · hourly`
-                : `${formatDuration(summary.trackedTimeMs)} across ${RANGE_LABEL[range as Exclude<RangeDays, 0>]} · daily`
-              : '—'}
-          </span>
-        </div>
-        <div className="px-6 pb-6">
-          {isToday ? (
-            <HourlyChart sessions={sessions} dayStartMs={dayStartMs} dark={dark} />
-          ) : (
-            <DailyChart trend={rangeData?.trend ?? []} days={range as Exclude<RangeDays, 0>} dark={dark} />
+          {/* Today: session timeline */}
+          {isToday && sessions.length > 0 && (
+            <Timeline sessions={sessions} categories={categories} dayStartMs={dayStartMs} />
           )}
-        </div>
-      </div>
 
-      {/* Productivity mix */}
-      <div className={`${CARD_CLS} mb-9`}>
-        <div className="flex items-center justify-between px-6 pt-5 pb-2">
-          <h2 className="text-lg font-bold">Productivity Mix</h2>
-          <span className="text-xs text-gray-500 dark:text-gray-500">
-            {isToday ? 'categories today' : 'categories in range'}
-          </span>
-        </div>
-        <MixCard sessions={isToday ? sessions : undefined} breakdown={isToday ? undefined : rangeData?.categoryBreakdown} />
-      </div>
+          {/* Focused time chart: hourly for today, daily for ranges */}
+          <div className={CARD_CLS}>
+            <div className="flex items-center justify-between px-6 pt-5 pb-4">
+              <h2 className="text-lg font-bold">Focused Time</h2>
+              <span className="text-xs text-gray-500 dark:text-gray-500">
+                {summary
+                  ? isToday
+                    ? `${formatDuration(summary.trackedTimeMs)} ${dayOffset === 0 ? 'today' : 'that day'} · hourly`
+                    : `${formatDuration(summary.trackedTimeMs)} across ${RANGE_LABEL[range as Exclude<RangeDays, 0>]} · daily`
+                  : '—'}
+              </span>
+            </div>
+            <div className="px-6 pb-6">
+              {isToday ? (
+                <HourlyChart sessions={sessions} dayStartMs={dayStartMs} dark={dark} />
+              ) : (
+                <DailyChart trend={rangeData?.trend ?? []} days={range as Exclude<RangeDays, 0>} dark={dark} />
+              )}
+            </div>
+          </div>
 
-      {/* Usage breakdown */}
-      <div className="flex items-baseline justify-between mb-4">
-        <h2 className="text-lg font-bold">Usage Breakdown</h2>
-        <span className="text-xs text-gray-500 dark:text-gray-500">apps and websites</span>
-      </div>
-      <div className="grid lg:grid-cols-2 gap-5">
-        <SplitCard title="App Split" caption="tracked apps" entries={summary?.topApps} />
-        <SplitCard title="Browser Activity" caption="visited sites" entries={summary?.topSites} />
+          {/* Productivity mix */}
+          <div className={CARD_CLS}>
+            <div className="flex items-center justify-between px-6 pt-5 pb-2">
+              <h2 className="text-lg font-bold">Productivity Mix</h2>
+              <span className="text-xs text-gray-500 dark:text-gray-500">
+                {isToday ? 'categories today' : 'categories in range'}
+              </span>
+            </div>
+            <MixCard sessions={isToday ? sessions : undefined} breakdown={isToday ? undefined : rangeData?.categoryBreakdown} />
+          </div>
+
+          {/* Usage breakdown */}
+          <div>
+            <div className="flex items-baseline justify-between mb-4">
+              <h2 className="text-lg font-bold">Usage Breakdown</h2>
+              <span className="text-xs text-gray-500 dark:text-gray-500">apps and websites</span>
+            </div>
+            <div className="grid lg:grid-cols-2 gap-5">
+              <SplitCard title="App Split" caption="apps · sites excluded" entries={summary?.topApps} />
+              <SplitCard title="Browser Activity" caption="visited sites" entries={summary?.topSites} />
+            </div>
+          </div>
+        </div>
+
+        {/* Donut sidebar (stacks below on narrow screens) */}
+        <aside className="space-y-4 xl:sticky xl:top-20">
+          <DonutCard sessions={isToday ? sessions : undefined} breakdown={isToday ? undefined : rangeData?.categoryBreakdown} />
+        </aside>
       </div>
     </div>
   )
@@ -541,4 +536,75 @@ function catName(id?: number): string {
     case 9: return 'Unproductive'
     default: return 'Neutral'
   }
+}
+
+/** Category donut (Productive / Neutral / Unproductive) + legend with share. */
+function DonutCard({ sessions, breakdown }: {
+  sessions?: Session[]
+  breakdown?: CategorySlice[]
+}) {
+  let slices: { name: string; durationMs: number; color: string }[] = []
+
+  if (sessions) {
+    const byCat = new Map<number, number>()
+    for (const s of sessions) {
+      const dur = s.ended_at - s.started_at
+      if (dur < 3000) continue
+      const key = s.category_id ?? 8
+      byCat.set(key, (byCat.get(key) ?? 0) + dur)
+    }
+    slices = [...byCat.entries()].map(([id, durationMs]) => ({
+      name: catName(id),
+      durationMs,
+      color: categoryColor(id)
+    }))
+  } else if (breakdown) {
+    slices = breakdown.map((s) => ({
+      name: s.name,
+      durationMs: s.durationMs,
+      color: categoryColor(s.categoryId)
+    }))
+  }
+
+  slices.sort((a, b) => b.durationMs - a.durationMs)
+  const total = slices.reduce((sum, s) => sum + s.durationMs, 0)
+
+  return (
+    <div className={CARD_CLS}>
+      <h3 className="text-base font-bold px-6 pt-5 pb-2">Breakdown</h3>
+      {total === 0 ? (
+        <div className="px-6 pb-6 text-[13px] text-gray-400 dark:text-gray-600">No tracked time yet</div>
+      ) : (
+        <div className="px-4 pb-5">
+          <ResponsiveContainer width="100%" height={150}>
+            <PieChart>
+              <Pie
+                data={slices}
+                dataKey="durationMs"
+                nameKey="name"
+                innerRadius={48}
+                outerRadius={72}
+                paddingAngle={2}
+                stroke="none"
+              >
+                {slices.map((d, i) => (
+                  <Cell key={i} fill={d.color} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="space-y-2 mt-1">
+            {slices.map((d) => (
+              <div key={d.name} className="flex items-center gap-2 px-2 text-xs">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                <span className="text-gray-600 dark:text-gray-300 flex-1">{d.name}</span>
+                <span className="tabular-nums text-gray-400 dark:text-gray-600">{Math.round((d.durationMs / total) * 100)}%</span>
+                <span className="tabular-nums font-medium text-gray-700 dark:text-gray-200">{formatDuration(d.durationMs)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }

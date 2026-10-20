@@ -26,7 +26,7 @@ export default function SettingsView({
         ]}
       />
       {tab === 'rules' && <RulesTab />}
-      {tab === 'general' && <GeneralTab />}
+      {tab === 'general' && <GeneralTab theme={theme} onThemeChange={onThemeChange} />}
       {tab === 'data' && <DataTab />}
     </div>
   )
@@ -305,7 +305,7 @@ function GeneralTab({ theme, onThemeChange }: { theme?: ThemeSetting; onThemeCha
       <div>
         <label className="block font-medium mb-1">Appearance</label>
         <Segmented
-          value={theme ?? 'dark'}
+          value={theme ?? 'light'}
           onChange={(v) => onThemeChange?.(v)}
           options={[
             { value: 'system', label: 'System' },

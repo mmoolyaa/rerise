@@ -46,9 +46,20 @@ export function summarizeSessions(
     .filter((s) => !s.category_id || s.category_id === 8)
     .reduce((sum, s) => sum + (s.ended_at - s.started_at), 0)
 
-  const byName = (key: (s: Session) => string | undefined) => {
-    const map = new Map<string, { durationMs: number; cats: Map<number, number> }>()
+  interface NameAgg {
+    durationMs: number
+    cats: Map<number, number>
+  }
+
+  /**
+   * Aggregates durations by a name key. `filter` decides which sessions count,
+   * so the app split can exclude browser sessions that already carry a domain
+   * (that time belongs to the site split - no double counting).
+   */
+  const byName = (key: (s: Session) => string | undefined, filter: (s: Session) => boolean) => {
+    const map = new Map<string, NameAgg>()
     for (const s of sessions) {
+      if (!filter(s)) continue
       const dur = s.ended_at - s.started_at
       if (dur < MIN_SESSION_DURATION_MS) continue
       const k = key(s)
@@ -74,7 +85,9 @@ export function summarizeSessions(
     coveragePercent: Math.round(coveragePercent),
     uncategorizedMs,
     sessionCount,
-    topApps: byName((s) => s.app_name),
-    topSites: byName((s) => s.domain)
+    // Apps: only time WITHOUT site knowledge (browser activity flows to topSites)
+    topApps: byName((s) => s.app_name, (s) => !s.domain),
+    // Sites: only sessions the extension could attribute to a domain
+    topSites: byName((s) => s.domain ?? '', (s) => Boolean(s.domain))
   }
 }
