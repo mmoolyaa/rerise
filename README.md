@@ -1,4 +1,4 @@
-# Tempo ⏱️
+# Re:Rise ∴↗
 
 A **local-first productivity tracker** for your desktop — see what you actually do all day, categorize it, and get a 0–100 productivity score.
 
@@ -32,27 +32,27 @@ npm run dev
 
 `npm install` uses prebuilt native binaries (no Visual Studio needed).
 
-Pair the extension: load the `extension/` folder via `chrome://extensions` → *Load unpacked*, open the extension options, paste the token + port from Tempo's **Settings → General** panel, Test connection.
+Pair the extension: load the `extension/` folder via `chrome://extensions` → *Load unpacked*, open the extension options, paste the token + port from Re:Rise's **Settings → General** panel, Test connection.
 
 ### Useful commands
 
 | Command | What it does |
 |---|---|
 | `npm run dev` | Dev app with hot reload |
-| `npm run dist` | Build a **Windows NSIS installer** → `release/Tempo Setup x.y.z.exe` |
+| `npm run dist` | Build a **Windows NSIS installer** → `release/ReRise Setup x.y.z.exe` |
 | `npm run test` | Unit tests (vitest, watch mode) |
 | `npx vitest run` | Unit tests, single run |
 | `npm run typecheck` | TypeScript checks across main/preload/renderer |
 
 ### Building the installer (Windows)
 
-1. Close any running Tempo (`Task Manager` or `taskkill /F /IM Tempo.exe`) — a locked exe fails the build.
+1. Close any running instance (`Task Manager` or `taskkill /F /IM ReRise.exe`) — a locked exe fails the build.
 2. `npm run dist` — output lands in `release/`.
 3. First-build caveat: electron-builder downloads `winCodeSign` and can fail on its 7z self-check. If you see a `winCodeSign` cache error, extract the archive manually so `%LOCALAPPDATA%\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0` exists; the 2 darwin symlink warnings are ignorable.
 
 ## Install on Windows (packaged)
 
-Grab the latest installer from the [Releases page](https://github.com/mmoolyaa/tempo-time-tracker/releases), or build it yourself (above). It's a normal installer (choose install dir, desktop shortcut). The app **auto-starts after login** (toggle in Settings → General), closes to the system tray, and logs to `%APPDATA%\Tempo\data\logs\tempo.log`. Tray → *Quit* fully exits.
+Grab the latest installer from the [Releases page](https://github.com/mmoolyaa/tempo-time-tracker/releases), or build it yourself (above). It's a normal installer (choose install dir, desktop shortcut). The app **auto-starts after login** (toggle in Settings → General), closes to the system tray, and logs to `%APPDATA%\Tempo\data\logs\tempo.log` (data folder keeps the legacy `Tempo` name for continuity). Tray → *Quit* fully exits.
 
 ## Changing app/site categories
 

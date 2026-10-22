@@ -40,7 +40,7 @@ export function createTray(window: BrowserWindow, tracker: Tracker) {
       }
     ])
     tray?.setContextMenu(menu)
-    tray?.setToolTip(`Tempo - tracking ${tracker.getState().toLowerCase()}`)
+    tray?.setToolTip(`Re:Rise - tracking ${tracker.getState().toLowerCase()}`)
   }
 
   buildMenu()
@@ -53,7 +53,7 @@ export function createTray(window: BrowserWindow, tracker: Tracker) {
   })
 
   tracker.addStateListener((state) => {
-    tray?.setToolTip(`Tempo - tracking ${state.toLowerCase()}`)
+    tray?.setToolTip(`Re:Rise - tracking ${state.toLowerCase()}`)
     buildMenu()
   })
 }

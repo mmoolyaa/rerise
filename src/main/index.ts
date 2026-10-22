@@ -10,6 +10,11 @@ import { getIconPath } from './appIcon'
 import { initTheme } from './theme'
 import type { TrackingState } from './tracker/types'
 
+// Rebrand continuity: the app is now "ReRise" but all existing user data
+// (SQLite DB, settings, logs) lives in %APPDATA%\Tempo. Keep pointing
+// userData there so nobody loses their history on this upgrade.
+app.setPath('userData', join(app.getPath('appData'), 'Tempo'))
+
 let mainWindow: BrowserWindow | null = null
 let tracker: Tracker | null = null
 
@@ -97,6 +102,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
+    title: 'Re:Rise',
     show: true, // Explicitly show window
     webPreferences: {
       contextIsolation: true,
