@@ -1,6 +1,6 @@
 {
   "name": "tempo",
-  "version": "0.1.0",
+  "version": "1.2.0",
   "description": "Local-first productivity tracker",
   "author": "Tempo",
   "type": "module",

@@ -44,9 +44,21 @@ Pair the extension: load the `extension/` folder via `chrome://extensions` → *
 | `npx vitest run` | Unit tests, single run |
 | `npm run typecheck` | TypeScript checks across main/preload/renderer |
 
+### Building the installer (Windows)
+
+1. Close any running Tempo (`Task Manager` or `taskkill /F /IM Tempo.exe`) — a locked exe fails the build.
+2. `npm run dist` — output lands in `release/`.
+3. First-build caveat: electron-builder downloads `winCodeSign` and can fail on its 7z self-check. If you see a `winCodeSign` cache error, extract the archive manually so `%LOCALAPPDATA%\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0` exists; the 2 darwin symlink warnings are ignorable.
+
 ## Install on Windows (packaged)
 
-`npm run dist` produces `release/Tempo Setup 0.1.0.exe` — a normal installer (choose install dir, desktop shortcut). The app auto-starts after login and logs to `%APPDATA%\Tempo\data\logs\tempo.log`. Tray → *Quit* fully exits.
+Grab the latest installer from the [Releases page](https://github.com/mmoolyaa/tempo-time-tracker/releases), or build it yourself (above). It's a normal installer (choose install dir, desktop shortcut). The app **auto-starts after login** (toggle in Settings → General), closes to the system tray, and logs to `%APPDATA%\Tempo\data\logs\tempo.log`. Tray → *Quit* fully exits.
+
+## Changing app/site categories
+
+- **Fastest**: **Sessions** tab → click `app→rule` / `site→rule` on a row → pick a category. This creates a permanent rule and immediately re-categorizes all past + future sessions from that app/site.
+- **Earlier rules**: **Settings → Rules** lists everything grouped (apps, sites, title patterns), supports editing/removal, and has **Apply rules to history** to re-match all stored sessions after rule changes.
+- Higher-priority rules win; notes in the rules tab explain defaults.
 
 ## Fedora Linux (experimental)
 
