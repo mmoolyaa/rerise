@@ -24,8 +24,8 @@ Electron 32 + TypeScript + React 18 + Tailwind + better-sqlite3. Pure functions 
 Prerequisites: [Node.js 20+](https://nodejs.org), git, npm.
 
 ```bash
-git clone https://github.com/mmoolyaa/tempo-time-tracker.git
-cd tempo-time-tracker
+git clone https://github.com/mmoolyaa/rerise.git
+cd rerise
 npm install
 npm run dev
 ```
@@ -52,7 +52,7 @@ Pair the extension: load the `extension/` folder via `chrome://extensions` → *
 
 ## Install on Windows (packaged)
 
-Grab the latest installer from the [Releases page](https://github.com/mmoolyaa/tempo-time-tracker/releases), or build it yourself (above). It's a normal installer (choose install dir, desktop shortcut). The app **auto-starts after login** (toggle in Settings → General), closes to the system tray, and logs to `%APPDATA%\Tempo\data\logs\tempo.log` (data folder keeps the legacy `Tempo` name for continuity). Tray → *Quit* fully exits.
+Grab the latest installer from the [Releases page](https://github.com/mmoolyaa/rerise/releases), or build it yourself (above). It's a normal installer (choose install dir, desktop shortcut). The app **auto-starts after login** (toggle in Settings → General), closes to the system tray, and logs to `%APPDATA%\Tempo\data\logs\tempo.log` (data folder keeps the legacy `Tempo` name for continuity). Tray → *Quit* fully exits.
 
 ## Changing app/site categories
 
@@ -73,8 +73,8 @@ curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
 sudo dnf install -y nodejs
 
 # clone & run
-git clone https://github.com/mmoolyaa/tempo-time-tracker.git
-cd tempo-time-tracker
+git clone https://github.com/mmoolyaa/rerise.git
+cd rerise
 npm install
 npm run dev
 ```
