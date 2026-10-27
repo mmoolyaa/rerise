@@ -128,11 +128,27 @@ export default function StatsView() {
       {/* Main column + donut sidebar */}
       <div className="grid xl:grid-cols-[1fr_272px] gap-5 items-start">
         <div className="min-w-0 space-y-5">
-          {/* Stat cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-            <StatCard label="Focus time" value={summary ? formatDuration(summary.focusTimeMs) : '--'} sub={RANGE_LABEL[range as Exclude<RangeDays, 0>]} />
+          {/* Stat cards: 5 metrics — focus aggregates, switches, score, streak */}
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+            <StatCard label="Focus time" value={summary ? formatDuration(summary.focusTimeMs) : '--'} sub={RANGE_LABEL[range as Exclude<RangeDays, 0>] ?? ''}
+              title="Rize-inspired window model: a focus session is continuous productive work interrupted only by neutral detours of up to 5 minutes each. Any rolling 15-minute window reaching 75% productive time qualifies the session; all productive time inside qualifying sessions counts. Switching between productive apps never hurts." />
+            <StatCard
+              label="Longest focus"
+              value={summary?.longestFocusMs == null ? '--' : formatDuration(summary.longestFocusMs)}
+              sub={RANGE_LABEL[range as Exclude<RangeDays, 0>] ?? ''}
+              title="Duration of the longest qualifying focus session (start of first productive moment through the last). Tolerated neutral detours (5 min each) inside are included; leading/trailing neutral, distracting apps and idle gaps are not. '--' means nothing qualified."
+            />
+            <StatCard
+              label="Context switches"
+              value={summary ? String(summary.contextSwitches) : '--'}
+              sub={
+                summary?.switchesPerProductiveHour != null
+                  ? `${summary.switchesPerProductiveHour.toFixed(1)} per productive hour`
+                  : 'per productive hour: --'
+              }
+              title="Transitions between distinct consecutive apps and websites in the period. Same-domain navigation and repeated window observations are not counted."
+            />
             <StatCard label="Score" value={summary?.score == null ? '--' : String(Math.round(summary.score))} sub={isToday ? 'productivity' : 'avg productivity'} />
-            <StatCard label="Sessions" value={summary ? String(summary.sessionCount) : '--'} sub="focus blocks" />
             <StatCard label="Streak" value={String(streak)} sub="days" />
           </div>
 
@@ -289,15 +305,17 @@ function HourlyChart({ sessions, dayStartMs, dark }: { sessions: Session[]; dayS
 
 // ---------- stat cards ----------
 
-function StatCard({ label, value, sub, children, className = '' }: {
+function StatCard({ label, value, sub, title, children, className = '' }: {
   label: string
   value: string
   sub: string
+  /** Optional explanation shown as a native tooltip on hover. */
+  title?: string
   children?: React.ReactNode
   className?: string
 }) {
   return (
-    <div className={`${CARD_CLS} px-5 py-5 ${className}`}>
+    <div className={`${CARD_CLS} px-5 py-5 ${className}`} title={title}>
       <div className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gray-400 dark:text-gray-600">{label}</div>
       <div className="text-[26px] leading-8 font-extrabold mt-2 tabular-nums">{value}</div>
       {children}

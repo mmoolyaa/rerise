@@ -26,7 +26,8 @@ describe('summarizeSessions', () => {
     // score: (14*2 + 6*0)/20 -> avg 1.4 -> (1.4+2)/4*100 = 85
     expect(r.score).toBe(85)
     expect(r.trackedTimeMs).toBe(20 * min)
-    expect(r.focusTimeMs).toBe(0) // under 25min
+    expect(r.focusTimeMs).toBe(14 * min) // 14min productive qualifies (≥ 11:15)
+    expect(r.longestFocusMs).toBe(14 * min) // trailing neutral is not part of the span
     expect(r.coveragePercent).toBe(Math.round((20 * min / (60 * min)) * 100))
   })
 
@@ -70,5 +71,58 @@ describe('summarizeSessions', () => {
     expect(r.trackedTimeMs).toBe(0)
     expect(r.coveragePercent).toBe(0)
     expect(r.topApps).toHaveLength(0)
+    expect(r.longestFocusMs).toBeNull()
+    expect(r.contextSwitches).toBe(0)
+    expect(r.switchesPerProductiveHour).toBeNull()
+  })
+
+  describe('focus and switch metrics', () => {
+    it('reports longest focus, switches and the productive-hour rate', () => {
+      // two 90min sessions of different apps separated by a distraction
+      const sessions = [
+        session(0, 90 * min, 1, 'Code.exe'),
+        session(90 * min, 95 * min, 9, 'Insta.exe'),
+        session(95 * min, 185 * min, 1, 'Code.exe')
+      ]
+      const r = summarizeSessions(sessions, categories, 0, 185 * min)
+      // longest block = one 90min productive stretch
+      expect(r.longestFocusMs).toBe(90 * min)
+      // switches: Code -> Insta -> Code = 2
+      expect(r.contextSwitches).toBe(2)
+      // productive minutes = 180min = 3h -> 2/3 per productive hour
+      expect(r.switchesPerProductiveHour).toBeCloseTo(2 / 3, 4)
+    })
+
+    it('neutral detours under 5 minutes do not split the longest block', () => {
+      const sessions = [
+        session(0, 30 * min, 1, 'Code.exe'),
+        session(30 * min, 34 * min, 8, 'Finder.exe'), // 4min neutral bridge
+        session(34 * min, 70 * min, 1, 'Code.exe')
+      ]
+      const r = summarizeSessions(sessions, categories, 0, 70 * min)
+      expect(r.longestFocusMs).toBe(70 * min) // session span; 4min bridge included
+      expect(r.focusTimeMs).toBe(66 * min) // productive only (30 + 36)
+    })
+
+    it('switch rate is null when nothing productive happened', () => {
+      const sessions = [
+        session(0, 30 * min, 8, 'Files.exe'),
+        session(30 * min, 60 * min, 9, 'Insta.exe')
+      ]
+      const r = summarizeSessions(sessions, categories, 0, 60 * min)
+      expect(r.contextSwitches).toBe(1)
+      expect(r.switchesPerProductiveHour).toBeNull()
+    })
+
+    it('domain changes count as switches between sites', () => {
+      const sessions = [
+        session(0, 10 * min, 1, 'brave.exe', 'github.com'),
+        session(10 * min, 20 * min, 1, 'brave.exe', 'stackoverflow.com'),
+        session(20 * min, 30 * min, 1, 'brave.exe', 'github.com')
+      ]
+      const r = summarizeSessions(sessions, categories, 0, 30 * min)
+      expect(r.contextSwitches).toBe(2)
+      expect(r.longestFocusMs).toBe(30 * min)
+    })
   })
 })

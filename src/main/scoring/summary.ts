@@ -1,6 +1,7 @@
 import type { Session, Category } from '../db/types'
 import { computeScore, type ScoreResult } from './score'
-import { computeFocusTime } from './focusTime'
+import { computeFocusTime, longestFocusSessionMs } from './focusTime'
+import { countContextSwitches, switchesPerProductiveHour } from './switches'
 
 const MIN_SESSION_DURATION_MS = 3000
 
@@ -21,6 +22,15 @@ export interface TodaySummary {
   uncategorizedMs: number
   // count of meaningful (>= MIN_SESSION_DURATION_MS) sessions in the period
   sessionCount: number
+  // Longest qualifying focus session (chain whose best rolling 15-min window
+  // reaches >= 75% productive coverage; span includes tolerated neutral
+  // bridges, excludes wind-in/-out neutral). null when nothing qualifies.
+  // null when nothing qualified in the period - shown as an empty state.
+  longestFocusMs: number | null
+  // Transitions between distinct consecutive apps/websites in the period.
+  contextSwitches: number
+  // contextSwitches per productive hour; null when productive time is 0.
+  switchesPerProductiveHour: number | null
   topApps: TopEntry[]
   topSites: TopEntry[]
 }
@@ -36,8 +46,23 @@ export function summarizeSessions(
   periodEndMs: number
 ): TodaySummary {
   const { score, trackedTimeMs } = computeScore(sessions, categories)
-  const focusTimeMs = computeFocusTime(sessions, categories)
+  const focusTimeMs = computeFocusTime(sessions, categories, periodStartMs, periodEndMs)
   const sessionCount = sessions.filter((s) => s.ended_at - s.started_at >= MIN_SESSION_DURATION_MS).length
+
+  // Context-switch metrics (kept free of hardcoded category ids: uses the
+  // categories' productivity model, same qualification focus blocks use)
+  const productivityById = new Map<number, number>()
+  for (const c of categories) {
+    productivityById.set(c.id, c.productivity)
+  }
+  let productiveMs = 0
+  for (const s of sessions) {
+    const dur = s.ended_at - s.started_at
+    if (dur < MIN_SESSION_DURATION_MS) continue
+    const p = s.category_id ? (productivityById.get(s.category_id) ?? 0) : 0
+    if (p >= 1) productiveMs += dur
+  }
+  const contextSwitches = countContextSwitches(sessions)
 
   const periodLength = Math.max(1, periodEndMs - periodStartMs)
   const coveragePercent = Math.min(100, (trackedTimeMs / periodLength) * 100)
@@ -85,6 +110,9 @@ export function summarizeSessions(
     coveragePercent: Math.round(coveragePercent),
     uncategorizedMs,
     sessionCount,
+    longestFocusMs: longestFocusSessionMs(sessions, categories, periodStartMs, periodEndMs),
+    contextSwitches,
+    switchesPerProductiveHour: switchesPerProductiveHour(contextSwitches, productiveMs),
     // Apps: only time WITHOUT site knowledge (browser activity flows to topSites)
     topApps: byName((s) => s.app_name, (s) => !s.domain),
     // Sites: only sessions the extension could attribute to a domain

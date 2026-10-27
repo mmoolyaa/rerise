@@ -10,7 +10,10 @@ Windows-first, with experimental Linux support. All data stays **on your machine
 - **3-category model**: Productive / Neutral / Unproductive, powered by a configurable rules engine (app, domain, and title regex rules)
 - **Browser domains**: pair the bundled Chrome/Brave extension and the tracker records the *site* you're on (e.g. `instagram.com`), not just "Browser"
 - **Idle, lock & sleep aware**: stays idle while you're away; sessions close cleanly
-- **Dashboard**: hour-grid day timeline, productivity mix, focus time (25min+ productive streaks), score circle, top apps/sites with categories, week/month trends
+- **Dashboard**: hour-grid day timeline, productivity mix, stat cards — focus time, longest focus session, context switches, score, streak — plus top apps/sites with categories, week/month trends
+  - **Focus time** (Rize-inspired window model): a focus session is continuous productive work; neutral detours of up to 5 min each bridge it, while distracting activity, longer neutral runs, or an untracked gap (idle/lock/pause/sleep) end it. A session qualifies when its best rolling 15-minute window reaches ≥ 75 % productive coverage; then **all productive time in the session counts** (11:15 min exact threshold). Switching between productive apps never hurts.
+  - **Longest focus session**: span of the longest qualifying session, from first productive moment to last; tolerated neutral bridges inside are included, leading/trailing neutral is excluded. `--` if nothing qualified.
+  - **Context switches**: transitions between distinct consecutive apps/websites; repeated observations of the same window and same-domain navigation are not counted. Sub-label shows switches per productive hour (`--` when no productive time)
 - **Sessions view**: manually re-categorize anything; one-click re-apply rules to history
 - **Export** to CSV/JSON, full data wipe from settings
 - Lives quietly in the **system tray** with pause/resume
