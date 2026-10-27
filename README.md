@@ -10,11 +10,12 @@ Windows-first, with experimental Linux support. All data stays **on your machine
 - **3-category model**: Productive / Neutral / Unproductive, powered by a configurable rules engine (app, domain, and title regex rules)
 - **Browser domains**: pair the bundled Chrome/Brave extension and the tracker records the *site* you're on (e.g. `instagram.com`), not just "Browser"
 - **Idle, lock & sleep aware**: stays idle while you're away; sessions close cleanly
-- **Dashboard**: hour-grid day timeline, productivity mix, stat cards — focus time, longest focus session, context switches, score, streak — plus top apps/sites with categories, week/month trends
+- **Dashboard**: hour-grid day timeline, productivity mix, stat cards — focus time, longest focus session, context switches, streak — with the productivity score centered in the category donut, plus top apps/sites with categories, week/month trends
   - **Focus time** (Rize-inspired window model): a focus session is continuous productive work; neutral detours of up to 5 min each bridge it, while distracting activity, longer neutral runs, or an untracked gap (idle/lock/pause/sleep) end it. A session qualifies when its best rolling 15-minute window reaches ≥ 75 % productive coverage; then **all productive time in the session counts** (11:15 min exact threshold). Switching between productive apps never hurts.
   - **Longest focus session**: span of the longest qualifying session, from first productive moment to last; tolerated neutral bridges inside are included, leading/trailing neutral is excluded. `--` if nothing qualified.
   - **Context switches**: transitions between distinct consecutive apps/websites; repeated observations of the same window and same-domain navigation are not counted. Sub-label shows switches per productive hour (`--` when no productive time)
 - **Sessions view**: manually re-categorize anything; one-click re-apply rules to history
+- **Day digests** (Summary tab): each day is rendered as a local, deterministic write-up — headline stat cards plus short factual prose (longest qualifying focus stretch, active span, peak hour, top apps/sites, unproductive time). Today stays a live draft; days finalize at local midnight and past days (up to 30) backfill on launch. Regenerate or copy any digest.
 - **Export** to CSV/JSON, full data wipe from settings
 - Lives quietly in the **system tray** with pause/resume
 
@@ -107,5 +108,6 @@ Categories are weighted: Productive = +2, Neutral = 0, Unproductive = −2 → t
 
 - [x] Windows MVP (tracker, dashboard, extension, export, installer)
 - [x] 3-category consolidation + Rize-style UI
+- [x] Day digests (local template summarizer) — pluggable engine for an LLM upgrade later
 - [ ] Proper Linux/macOS support
 - [ ] Weekly goals & timelines like Rize
