@@ -21,11 +21,18 @@ export class WindowsPlatform implements PlatformProvider {
   }
   
   isBrowser(appName: string): boolean {
-    // active-win reports display names ('Brave Browser') OR exe names
-    // ('brave.exe') depending on the window, so match loosely on browser
-    // tokens and strip any .exe suffix first.
-    const browserTokens = ['brave', 'chrome', 'msedge', 'edge', 'firefox', 'opera', 'vivaldi']
-    const normalized = appName.toLowerCase().replace(/\.exe$/, '')
-    return browserTokens.some((t) => normalized.includes(t))
+    // active-win reports display names ('Brave Browser', 'ego (lite)') OR exe
+    // names ('brave.exe') depending on the window, so match tokens at word
+    // start: the name begins with the token, or the token follows a separator.
+    // Plain substring matching is too loose for short tokens (e.g. 'ego').
+    const browserTokens = [
+      'brave', 'chrome', 'chromium', 'msedge', 'edge', 'firefox', 'waterfox',
+      'opera', 'vivaldi', 'zen', 'thorium', 'librewolf', 'floorp',
+      'whale', 'ecosia', 'duckduckgo', 'ego'
+    ]
+    const normalized = appName.toLowerCase().replace(/\.exe$/, '').replace(/_/g, ' ')
+    return browserTokens.some(
+      (t) => normalized.startsWith(t) || normalized.includes(` ${t}`)
+    )
   }
 }
