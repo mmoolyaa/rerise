@@ -7,6 +7,9 @@ type RulesReply = import('../main/ipc').RulesReply
 type RuleRequest = import('../main/ipc').RuleRequest
 type ThemeState = import('../main/theme').ThemeState
 type DayDataReply = import('../main/ipc').DayDataReply
+type DigestsReply = import('../main/ipc').DigestsReply
+type RegenerateDigestReply = import('../main/ipc').RegenerateDigestReply
+type TodayDigestReply = import('../main/summarizer/types').TodayDigestReply
 
 export interface RendererAPI {
   getTodaySummary: () => Promise<SummaryReply>
@@ -49,6 +52,11 @@ export interface RendererAPI {
   exportData: (format: 'csv' | 'json') => Promise<{ savedPath: string | null }>
   deleteAllData: () => Promise<{ ok: boolean }>
 
+  // day digests (summarizer)
+  getDigests: () => Promise<DigestsReply>
+  getTodayDigest: () => Promise<TodayDigestReply>
+  regenerateDigest: (day: string) => Promise<RegenerateDigestReply>
+
   onTrackingStateChanged: (callback: (state: string) => void) => () => void
 }
 
@@ -90,6 +98,10 @@ const api = {
 
   exportData: (format: 'csv' | 'json') => ipcRenderer.invoke('tempo:exportData', format),
   deleteAllData: () => ipcRenderer.invoke('tempo:deleteAllData'),
+
+  getDigests: () => ipcRenderer.invoke('tempo:getDigests'),
+  getTodayDigest: () => ipcRenderer.invoke('tempo:getTodayDigest'),
+  regenerateDigest: (day: string) => ipcRenderer.invoke('tempo:regenerateDigest', day),
 
   onTrackingStateChanged: (callback: (state: string) => void) => {
     const handler = (_event: unknown, data: { state: string }) => callback(data.state)

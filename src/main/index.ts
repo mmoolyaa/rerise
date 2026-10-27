@@ -5,6 +5,7 @@ import { Tracker } from './tracker/tracker'
 import { getDatabase, closeDatabase } from './db'
 import { registerIpcHandlers } from './ipc'
 import { startExtensionServer } from './server'
+import { ensureDigestsUpToDate, scheduleDigestMaintenance } from './summarizer/service'
 import { setupFileLogging } from './logging'
 import { getIconPath } from './appIcon'
 import { initTheme } from './theme'
@@ -83,6 +84,16 @@ if (!gotTheLock) {
 
     registerIpcHandlers(tracker)
     console.log('IPC handlers registered')
+
+    // Day digests: close any past days missing digests (midnight catchup +
+    // history backfill), then keep an hourly maintenance loop running.
+    try {
+      const added = ensureDigestsUpToDate()
+      if (added > 0) console.log(`[digest] backfilled ${added} day digest(s)`)
+      scheduleDigestMaintenance()
+    } catch (err) {
+      console.error('[digest] startup maintenance failed:', err)
+    }
 
     console.log('Creating window...')
     createWindow()

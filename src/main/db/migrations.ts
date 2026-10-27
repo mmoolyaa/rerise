@@ -130,8 +130,7 @@ INSERT INTO rules (match_type, pattern, category_id, priority) VALUES
   ('app', 'chrome.exe', 8, 30),
   ('app', 'msedge.exe', 8, 30);`
 
-export const migrations = {
-  1: `-- Initial schema for Tempo
+export const migrations = {  1: `-- Initial schema for Tempo
 -- Timestamps stored as UTC unix milliseconds
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -179,5 +178,18 @@ CREATE INDEX IF NOT EXISTS idx_rules_priority ON rules(priority DESC);`,
 
   2: DEFAULT_SEED_SQL,
 
-  3: MIGRATION3_SQL
+  3: MIGRATION3_SQL,
+
+  // 4: stored day digests for the summarizer (see src/main/summarizer/).
+  // facts_json keeps the full DayFacts snapshot so future template upgrades
+  // can re-render old digests from stored facts.
+  4: `
+CREATE TABLE IF NOT EXISTS daily_summaries (
+  day TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  summary_text TEXT NOT NULL,
+  facts_json TEXT NOT NULL,
+  is_final INTEGER NOT NULL DEFAULT 1
+);`
 }

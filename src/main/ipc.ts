@@ -31,6 +31,12 @@ import { sessionsToCsv, sessionsToJson } from './export/exportData'
 import { getPairing } from './server'
 import { createThemeStore, type ThemeSetting } from './theme'
 import { computeStreak, ymdKey } from './scoring/streak'
+import {
+  listStoredDigests,
+  renderTodayDigest,
+  generateDigestForDay
+} from './summarizer/service'
+import type { DigestRow, TodayDigestReply } from './summarizer/types'
 import type { Session, Category, Rule } from './db/types'
 import type { Tracker } from './tracker/tracker'
 import type { TrackingState } from './tracker/types'
@@ -239,6 +245,27 @@ export function registerIpcHandlers(tracker: Tracker) {
     app.setLoginItemSettings({ openAtLogin: Boolean(enabled), path: process.execPath })
     console.log(`auto-start on login: ${enabled}`)
   })
+
+  // ---- day digests (summarizer) ----
+  ipcMain.handle('tempo:getDigests', (): DigestsReply => {
+    return { digests: listStoredDigests(30) }
+  })
+
+  ipcMain.handle('tempo:getTodayDigest', (): TodayDigestReply => {
+    return renderTodayDigest()
+  })
+
+  // Manual re-finalization of a past day (template/data changed, backfill, etc).
+  ipcMain.handle('tempo:regenerateDigest', (_e, day: string): RegenerateDigestReply => {
+    if (typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      throw new Error('Invalid day key')
+    }
+    if (day === ymdKey(Date.now())) {
+      throw new Error('Today is a live draft and cannot be finalized early')
+    }
+    const dayStart = new Date(`${day}T00:00:00`).getTime()
+    return { digest: generateDigestForDay(dayStart) }
+  })
 }
 
 // ---- helpers ----
@@ -300,4 +327,12 @@ export interface RuleRequest {
   pattern: string
   category_id: number
   priority: number
+}
+
+export interface DigestsReply {
+  digests: DigestRow[]
+}
+
+export interface RegenerateDigestReply {
+  digest: DigestRow | null
 }

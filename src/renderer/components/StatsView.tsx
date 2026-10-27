@@ -33,7 +33,7 @@ function todayKey(): string {
 }
 
 export default function StatsView() {
-  const [range, setRange] = useState<RangeDays>(7)
+  const [range, setRange] = useState<RangeDays>(1)
   const [dayOffset, setDayOffset] = useState(0)
   const [rangeMenuOpen, setRangeMenuOpen] = useState(false)
   const isToday = range === 1
@@ -128,15 +128,15 @@ export default function StatsView() {
       {/* Main column + donut sidebar */}
       <div className="grid xl:grid-cols-[1fr_272px] gap-5 items-start">
         <div className="min-w-0 space-y-5">
-          {/* Stat cards: 5 metrics — focus aggregates, switches, score, streak */}
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+          {/* Stat cards: 4 metrics — focus aggregates, switches, streak (score lives in the donut) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard label="Focus time" value={summary ? formatDuration(summary.focusTimeMs) : '--'} sub={RANGE_LABEL[range as Exclude<RangeDays, 0>] ?? ''}
-              title="Rize-inspired window model: a focus session is continuous productive work interrupted only by neutral detours of up to 5 minutes each. Any rolling 15-minute window reaching 75% productive time qualifies the session; all productive time inside qualifying sessions counts. Switching between productive apps never hurts." />
+              info="Rize-inspired window model: a focus session is continuous productive work interrupted only by neutral detours of up to 5 minutes each. Any rolling 15-minute window reaching 75% productive time qualifies the session; all productive time inside qualifying sessions counts. Switching between productive apps never hurts." />
             <StatCard
               label="Longest focus"
               value={summary?.longestFocusMs == null ? '--' : formatDuration(summary.longestFocusMs)}
               sub={RANGE_LABEL[range as Exclude<RangeDays, 0>] ?? ''}
-              title="Duration of the longest qualifying focus session (start of first productive moment through the last). Tolerated neutral detours (5 min each) inside are included; leading/trailing neutral, distracting apps and idle gaps are not. '--' means nothing qualified."
+              info="Duration of the longest qualifying focus session (start of first productive moment through the last). Tolerated neutral detours (5 min each) inside are included; leading/trailing neutral, distracting apps and idle gaps are not. '--' means nothing qualified."
             />
             <StatCard
               label="Context switches"
@@ -146,10 +146,10 @@ export default function StatsView() {
                   ? `${summary.switchesPerProductiveHour.toFixed(1)} per productive hour`
                   : 'per productive hour: --'
               }
-              title="Transitions between distinct consecutive apps and websites in the period. Same-domain navigation and repeated window observations are not counted."
+              info="Transitions between distinct consecutive apps and websites in the period. Same-domain navigation and repeated window observations are not counted."
             />
-            <StatCard label="Score" value={summary?.score == null ? '--' : String(Math.round(summary.score))} sub={isToday ? 'productivity' : 'avg productivity'} />
-            <StatCard label="Streak" value={String(streak)} sub="days" />
+            <StatCard label="Streak" value={String(streak)} sub="days"
+              info="Consecutive active days ending today. If today has no tracked time yet, the count looks back from yesterday so the streak survives until the day truly ends." />
           </div>
 
           {/* Today: session timeline */}
@@ -204,7 +204,11 @@ export default function StatsView() {
 
         {/* Donut sidebar (stacks below on narrow screens) */}
         <aside className="space-y-4 xl:sticky xl:top-20">
-          <DonutCard sessions={isToday ? sessions : undefined} breakdown={isToday ? undefined : rangeData?.categoryBreakdown} />
+          <DonutCard
+            sessions={isToday ? sessions : undefined}
+            breakdown={isToday ? undefined : rangeData?.categoryBreakdown}
+            score={summary?.score ?? null}
+          />
         </aside>
       </div>
     </div>
@@ -305,17 +309,44 @@ function HourlyChart({ sessions, dayStartMs, dark }: { sessions: Session[]; dayS
 
 // ---------- stat cards ----------
 
-function StatCard({ label, value, sub, title, children, className = '' }: {
+function StatCard({ label, value, sub, info, children, className = '' }: {
   label: string
   value: string
   sub: string
-  /** Optional explanation shown as a native tooltip on hover. */
-  title?: string
+  /** Explanation surfaced through a styled popover anchored to the info badge. */
+  info?: string
   children?: React.ReactNode
   className?: string
 }) {
   return (
-    <div className={`${CARD_CLS} px-5 py-5 ${className}`} title={title}>
+    <div className={`${CARD_CLS} relative px-5 py-5 ${className}`}>
+      {info && (
+        <div className="group absolute top-2.5 right-2.5 z-30">
+          <span
+            tabIndex={0}
+            role="button"
+            aria-label={`${label} — what this metric means`}
+            className="w-6 h-6 rounded-full flex items-center justify-center bg-gray-100/90 dark:bg-white/[0.06] text-gray-400 dark:text-gray-500 group-hover:text-gray-600 group-hover:bg-gray-200/80 dark:group-hover:text-gray-300 dark:group-hover:bg-white/[0.11] group-focus-within:text-gray-600 group-focus-within:bg-gray-200/80 group-focus-within:ring-2 group-focus-within:ring-gray-300/70 dark:group-focus-within:ring-white/20 cursor-help outline-none transition-colors"
+          >
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+              <path d="M12 11v5" /><path d="M12 8h.01" strokeWidth="2.4" />
+            </svg>
+          </span>
+          <div
+            className="pointer-events-none absolute right-0 top-9 w-64 opacity-0 translate-y-1 invisible
+                       group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible
+                       group-focus-within:opacity-100 group-focus-within:translate-y-0 group-focus-within:visible
+                       transition duration-150 ease-out"
+          >
+            <div className="relative rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#141519] p-4 shadow-[0_10px_36px_-6px_rgba(24,24,27,0.25)] dark:shadow-[0_10px_36px_-6px_rgba(0,0,0,0.6)]">
+              <span className="absolute -top-1 right-6 w-2.5 h-2.5 rotate-45 bg-white dark:bg-[#141519] border-l border-t border-gray-200 dark:border-white/[0.08]" />
+              <div className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gray-400 dark:text-gray-500 mb-1.5">{label}</div>
+              <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-300">{info}</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="text-[10px] font-semibold tracking-[0.12em] uppercase text-gray-400 dark:text-gray-600">{label}</div>
       <div className="text-[26px] leading-8 font-extrabold mt-2 tabular-nums">{value}</div>
       {children}
@@ -556,10 +587,11 @@ function catName(id?: number): string {
   }
 }
 
-/** Category donut (Productive / Neutral / Unproductive) + legend with share. */
-function DonutCard({ sessions, breakdown }: {
+/** Category donut (Productive / Neutral / Unproductive), score centered in the hole, + legend. */
+function DonutCard({ sessions, breakdown, score }: {
   sessions?: Session[]
   breakdown?: CategorySlice[]
+  score?: number | null
 }) {
   let slices: { name: string; durationMs: number; color: string }[] = []
 
@@ -594,23 +626,32 @@ function DonutCard({ sessions, breakdown }: {
         <div className="px-6 pb-6 text-[13px] text-gray-400 dark:text-gray-600">No tracked time yet</div>
       ) : (
         <div className="px-4 pb-5">
-          <ResponsiveContainer width="100%" height={150}>
-            <PieChart>
-              <Pie
-                data={slices}
-                dataKey="durationMs"
-                nameKey="name"
-                innerRadius={48}
-                outerRadius={72}
-                paddingAngle={2}
-                stroke="none"
-              >
-                {slices.map((d, i) => (
-                  <Cell key={i} fill={d.color} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="relative">
+            <ResponsiveContainer width="100%" height={150}>
+              <PieChart>
+                <Pie
+                  data={slices}
+                  dataKey="durationMs"
+                  nameKey="name"
+                  innerRadius={48}
+                  outerRadius={72}
+                  paddingAngle={2}
+                  stroke="none"
+                >
+                  {slices.map((d, i) => (
+                    <Cell key={i} fill={d.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Score occupies the donut hole */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+              <span className="text-[24px] leading-6 font-extrabold tabular-nums">
+                {score == null ? '--' : Math.round(score)}
+              </span>
+              <span className="text-[9px] font-semibold tracking-[0.14em] uppercase text-gray-400 dark:text-gray-600 mt-0.5">score</span>
+            </div>
+          </div>
           <div className="space-y-2 mt-1">
             {slices.map((d) => (
               <div key={d.name} className="flex items-center gap-2 px-2 text-xs">

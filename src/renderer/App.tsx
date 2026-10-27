@@ -2,9 +2,10 @@ import { useState, useCallback, useEffect, type ReactNode } from 'react'
 import StatsView from './components/StatsView'
 import SessionsView from './components/SessionsView'
 import SettingsView from './components/SettingsView'
+import SummaryView from './components/SummaryView'
 import { useTodayData } from './hooks/useTodayData'
 
-type Nav = 'stats' | 'sessions' | 'settings'
+type Nav = 'stats' | 'summary' | 'sessions' | 'settings'
 type ThemeSetting = 'system' | 'dark' | 'light'
 
 function effectiveDark(next: ThemeSetting): boolean {
@@ -19,6 +20,8 @@ function applyThemeClass(dark: boolean) {
 
 export default function App() {
   const [nav, setNav] = useState<Nav>('stats')
+  // Clicking the Stats pill re-enters at Today, even if a range/day was left selected.
+  const [statsEpoch, setStatsEpoch] = useState(0)
   // Tracker state + pause only
   const { state, refresh: refreshState } = useTodayData()
 
@@ -63,7 +66,8 @@ export default function App() {
       <header className="fixed top-4 inset-x-0 z-40 flex justify-center pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
           <nav className="flex items-center gap-0.5 rounded-full bg-white dark:bg-[#0a0b0d] border border-gray-200/70 dark:border-white/[0.07] shadow-sm px-1.5 py-1.5">
-            <PillItem active={nav === 'stats'} onClick={() => setNav('stats')} label="Stats" icon={<IconStats />} />
+            <PillItem active={nav === 'stats'} onClick={() => { setNav('stats'); setStatsEpoch((e) => e + 1) }} label="Stats" icon={<IconStats />} />
+            <PillItem active={nav === 'summary'} onClick={() => setNav('summary')} label="Summary" icon={<IconSummary />} />
             <PillItem active={nav === 'sessions'} onClick={() => setNav('sessions')} label="Sessions" icon={<IconList />} />
             <PillItem active={nav === 'settings'} onClick={() => setNav('settings')} label="Settings" icon={<IconSliders />} />
           </nav>
@@ -86,7 +90,8 @@ export default function App() {
       {/* Content */}
       <main className="pt-20">
         <div className="mx-auto max-w-6xl px-8 pb-16">
-          {nav === 'stats' && <StatsView key={`stats-${dataVersion}`} />}
+          {nav === 'stats' && <StatsView key={`stats-${statsEpoch}-${dataVersion}`} />}
+          {nav === 'summary' && <SummaryView key={`summary-${dataVersion}`} />}
           {nav === 'sessions' && (
             <>
               <h1 className="text-2xl font-bold tracking-tight mb-1">Sessions</h1>
@@ -127,6 +132,16 @@ function IconStats() {
   return (
     <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 20V10" /><path d="M10 20V4" /><path d="M16 20v-7" /><path d="M22 20H2" strokeWidth="2" />
+    </svg>
+  )
+}
+
+function IconSummary() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z" />
+      <path d="M14 3v5h5" />
+      <path d="M9 13h6" /><path d="M9 17h6" />
     </svg>
   )
 }
