@@ -7,10 +7,22 @@ export interface TabReport {
 export interface CachedTab {
   domain: string
   title: string
-  reportedAt: number // server receive time - used for staleness (client clocks can skew)
+  reportedAt: number // server receive time - used for the age cap (client clocks can skew)
 }
 
-export const STALE_TAB_MS = 10_000 // ~10s since last heartbeat
+/**
+ * Attribution semantics (chain-scoped last-known):
+ * A static tab is STABLE, not stale: someone watching one YouTube video for
+ * 30 minutes must not flip to unattributed just because the tab never fired
+ * an event. So the cache keeps the last-known tab and never expires on a
+ * short timer. Validity ends by:
+ *   - invalidate(): the active window moved to a non-browser app (or tracking
+ *     restarted a new chain) - the caller decides, and no report arrived yet
+ *   - update(): any fresh report re-arms validity
+ *   - TAB_MAX_AGE_MS: a hard cap against reports that no longer correspond to
+ *     reality (e.g. the extension died and never refreshed)
+ */
+export const TAB_MAX_AGE_MS = 30 * 60 * 1000
 
 /**
  * Normalizes a URL to its domain:
@@ -35,6 +47,7 @@ export function normalizeDomain(url: string): string | null {
 
 export class TabCache {
   private latest: CachedTab | null = null
+  private invalid = false
 
   update(report: TabReport, receivedAt: number): CachedTab | null {
     const domain = normalizeDomain(report.url)
@@ -44,15 +57,22 @@ export class TabCache {
       title: report.title,
       reportedAt: receivedAt
     }
+    this.invalid = false // a fresh report re-arms attribution
     return this.latest
   }
 
+  /** The attribution context ended (e.g. active window left the browser). */
+  invalidate(): void {
+    this.invalid = true
+  }
+
   /**
-   * Returns tab data only if it is fresh (within stale threshold).
-   * The tracker MUST ignore stale data - never attribute it to the active session.
+   * Returns the last-known tab data, unless invalidated or beyond the hard
+   * age cap. Callers using this while the browser window is continuously
+   * active attribute reliably; the cap guards against zombie reports.
    */
-  getFresh(now: number, maxAgeMs = STALE_TAB_MS): CachedTab | null {
-    if (!this.latest) return null
+  getFresh(now: number, maxAgeMs = TAB_MAX_AGE_MS): CachedTab | null {
+    if (!this.latest || this.invalid) return null
     if (now - this.latest.reportedAt > maxAgeMs) return null
     return this.latest
   }

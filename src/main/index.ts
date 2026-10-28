@@ -73,7 +73,10 @@ if (!gotTheLock) {
     // Create tracker + register IPC handlers BEFORE the renderer loads, so
     // mount-time invoke calls (getTheme etc.) always find their handler.
     tracker = new Tracker()
-    if (tracker) tracker.getFreshTab = (now) => extension.getFreshTab(now)
+    if (tracker) {
+      tracker.getFreshTab = (now) => extension.getFreshTab(now)
+      tracker.invalidateTab = () => extension.invalidateTab()
+    }
 
     // Renderer tracking-state indicator
     tracker.addStateListener((state) => {

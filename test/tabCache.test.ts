@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeDomain, TabCache, STALE_TAB_MS } from '../src/main/server/tabCache'
+import { normalizeDomain, TabCache, TAB_MAX_AGE_MS } from '../src/main/server/tabCache'
 
 describe('normalizeDomain', () => {
   it('extracts domain from full URL', () => {
@@ -34,17 +34,34 @@ describe('normalizeDomain', () => {
   })
 })
 
-describe('TabCache staleness', () => {
-  it('returns fresh data within threshold', () => {
+describe('TabCache: chain-scoped last-known attribution', () => {
+  it('keeps attributing a static tab far beyond a 10s window (long video)', () => {
     const cache = new TabCache()
-    cache.update({ url: 'https://github.com/x', title: 'GitHub', timestamp: 100 }, 5000)
-    expect(cache.getFresh(5000 + STALE_TAB_MS)).not.toBeNull()
+    cache.update({ url: 'https://youtube.com/watch?v=x', title: 'Video', timestamp: 100 }, 5000)
+    // 25 minutes later, still the same active browser window, no events
+    expect(cache.getFresh(5000 + 25 * 60_000)?.domain).toBe('youtube.com')
   })
 
-  it('never returns stale data', () => {
+  it('invalidate() stops attribution for non-browser windows', () => {
+    const cache = new TabCache()
+    cache.update({ url: 'https://youtube.com/watch?v=x', title: 'Video', timestamp: 100 }, 5000)
+    cache.invalidate()
+    expect(cache.getFresh(6000)).toBeNull()
+  })
+
+  it('a fresh report re-arms attribution after invalidation', () => {
+    const cache = new TabCache()
+    cache.update({ url: 'https://youtube.com/x', title: 'YT', timestamp: 0 }, 1000)
+    cache.invalidate()
+    cache.update({ url: 'https://github.com/x', title: 'GH', timestamp: 0 }, 2000)
+    expect(cache.getFresh(3000)?.domain).toBe('github.com')
+  })
+
+  it('hard age cap still guards against zombie reports', () => {
     const cache = new TabCache()
     cache.update({ url: 'https://github.com/x', title: 'GitHub', timestamp: 100 }, 5000)
-    expect(cache.getFresh(5000 + STALE_TAB_MS + 1)).toBeNull()
+    expect(cache.getFresh(5000 + TAB_MAX_AGE_MS)).not.toBeNull()
+    expect(cache.getFresh(5000 + TAB_MAX_AGE_MS + 1)).toBeNull()
   })
 
   it('uses the last report received', () => {

@@ -147,7 +147,14 @@ export class Tracker {
     }
     
     const now = Date.now()
-    const domain = this.platform.isBrowser(win.appName) ? this.getFreshDomain() : undefined
+    let domain: string | undefined
+    if (this.platform.isBrowser(win.appName)) {
+      domain = this.getFreshDomain()
+    } else {
+      // Active window left the browser - drop last-known tab attribution so
+      // it can never leak to non-browser sessions or a later different tab.
+      this.invalidateTab?.()
+    }
 
     // Privacy: excluded domains are never recorded
     if (domain && isExcludedDomain(domain)) {
@@ -172,8 +179,11 @@ export class Tracker {
   }
   
   getFreshTab: ((now: number) => CachedTab | null) | null = null
+  /** Invalidates the last-known tab (TabCache.invalidate) - active window left the browser. */
+  invalidateTab: (() => void) | null = null
 
-  /** Domain from the extension's tab cache - only fresh data, never stale. */
+  /** Domain from the extension's tab cache - chain-scoped last-known data
+   * (static tabs are stable, not stale); the cache enforces the age cap. */
   private getFreshDomain(): string | undefined {
     if (!this.getFreshTab) return undefined
     const fresh = this.getFreshTab(Date.now())

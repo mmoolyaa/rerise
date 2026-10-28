@@ -21,7 +21,7 @@ export function getPairing(): { token: string; port: number } {
  * - handles CORS preflight (OPTIONS) for the extension origin
  * Returns the actually bound port (falls back if the default is taken).
  */
-export function startExtensionServer(): Promise<{ port: number; getFreshTab: (now: number) => CachedTab | null }> {
+export function startExtensionServer(): Promise<{ port: number; getFreshTab: (now: number) => CachedTab | null; invalidateTab: () => void }> {
   const token = getOrCreateToken()
 
   function createHandler(): http.RequestListener {
@@ -96,7 +96,7 @@ export function startExtensionServer(): Promise<{ port: number; getFreshTab: (no
         } else {
           console.error('Extension server failed to start:', err.message)
           // Still resolve with getFreshTab so nothing crashes - just no data
-          resolve({ port: 0, getFreshTab: () => null })
+          resolve({ port: 0, getFreshTab: () => null, invalidateTab: () => {} })
         }
       })
 
@@ -105,7 +105,7 @@ export function startExtensionServer(): Promise<{ port: number; getFreshTab: (no
         console.log(`Extension server listening on 127.0.0.1:${port}`)
         upsertPort(port)
         currentPairing = { token, port }
-        resolve({ port, getFreshTab: (now) => cache.getFresh(now) })
+        resolve({ port, getFreshTab: (now) => cache.getFresh(now), invalidateTab: () => cache.invalidate() })
       })
     }
 

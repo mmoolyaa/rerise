@@ -96,9 +96,34 @@ chrome.runtime.onStartup.addListener(() => {
 
 // ---- heartbeat ----
 // MV3 service workers die ~30s after their last event/API call, which kills
-// setInterval. A self-scheduling async loop survives instead: every fetch is
-// an extension API call that resets the idle timer, so the loop keeps running
-// while the browser stays focused. Incognito is skipped in postToTempo.
+// setInterval - and watching a static tab produces no tab events at all
+// (long YouTube videos would go unattributed). Two defenses:
+// 1. A self-scheduling async loop that reports every 3s while alive (every
+//    chrome.* call resets the idle timer).
+// 2. A chrome.alarms keepalive: fires every 30s regardless, re-syncs the
+//    active tab, and keeps the worker from dying permanently. Alarms are
+//    min-resolution-bound (Chrome >= 120 allows 0.5min; clamped otherwise).
+const KEEPALIVE_ALARM = 'tempo-keepalive'
+const ALARM_PERIOD_MIN = 0.5
+
+async function syncActiveTab() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+    if (tab) {
+      currentTab = { url: tab.url ?? '', title: tab.title ?? '', incognito: tab.incognito }
+    }
+    postToTempo()
+  } catch {
+    currentTab = null
+  }
+}
+
+chrome.alarms.create(KEEPALIVE_ALARM, { periodInMinutes: ALARM_PERIOD_MIN })
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === KEEPALIVE_ALARM) syncActiveTab()
+})
+
 async function heartbeatLoop() {
   for (;;) {
     await postToTempo()
@@ -111,6 +136,6 @@ function sleep(ms) {
 }
 
 // The loop never blocks event handling (genuinely async); exceptions inside
-// are caught in postToTempo. If the environment still kills the SW, events
-// (tab activation / focus change) wake it up and it re-posts immediately.
+// are caught in postToTempo. Even if the environment kills the SW anyway,
+// the alarm wakes it within ~30-60s and attribution resumes.
 heartbeatLoop()

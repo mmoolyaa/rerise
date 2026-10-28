@@ -3,7 +3,7 @@
   "name": "Tempo Tracker",
   "version": "1.0.0",
   "description": "Reports the active tab URL/title to the Tempo app (localhost only).",
-  "permissions": ["storage", "tabs", "windows"],
+  "permissions": ["storage", "tabs", "windows", "alarms"],
   "host_permissions": ["http://127.0.0.1/*"],
   "background": {
     "service_worker": "background.js"
